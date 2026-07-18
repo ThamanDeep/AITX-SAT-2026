@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Fully autonomous nightly RSI cycle (EC2 host cron, 05:30 UTC — right after
-# the 05:00 memory distillation). No human in the loop:
+# Nightly RSI evaluation cycle (EC2 host cron, 05:30 UTC — right after
+# the 05:00 memory distillation):
 #   1. snapshot tonight's lessons out of the sandbox
 #   2. vf-eval rollouts with lessons injected (memory ON)
-#   3. auto_promote.py decides: PROMOTE / HOLD / ROLLBACK
-#   4. PROMOTE  -> tonight's lessons become the champion snapshot
-#      ROLLBACK -> champion lessons restored into the sandbox (bad night undone)
-#   5. trend CSV updated either way; full audit trail in /opt/aitx/rsi-cycles.log
-set -uo pipefail
+#   3. append the measured challenger with accepted=false
+#   4. request a human promote/keep decision in Discord
+# The cron never changes the champion.
+set -euo pipefail
 exec >> /opt/aitx/rsi-cycles.log 2>&1
 echo "=== RSI cycle $(date -u +%FT%TZ) ==="
 
@@ -24,7 +23,6 @@ C=$(docker ps --format '{{.Names}}' | grep openshell- | head -1)
 mkdir -p /opt/aitx/memory
 VERSION="auto-$(date -u +%Y%m%d)"
 LESSONS=/opt/aitx/memory/lessons-$VERSION.md
-CHAMPION=/opt/aitx/memory/champion-lessons.md
 
 docker cp "$C:/sandbox/.openclaw/workspace/MEMORY.md" "$LESSONS" 2>/dev/null || echo "" > "$LESSONS"
 echo "lessons snapshot: $LESSONS ($(wc -l < "$LESSONS") lines)"
@@ -37,23 +35,22 @@ uv run --with verifiers --with . vf-eval gpu-deal-judge \
 
 RESULTS=$(ls -t "$PWD"/outputs/evals/*/*/results.jsonl | head -1)
 cd "$REPO"
-DECISION=$(python3 scripts/auto_promote.py "$RESULTS" data/rsi_runs.csv \
-  "$VERSION" "Nightly lessons $(date -u +%F) (auto)" | tee /dev/stderr | tail -1)
+python3 scripts/verifiers_to_rsi_csv.py "$RESULTS" \
+  --output data/rsi_runs.csv \
+  --run-id "$VERSION-$(date -u +%H%M)" \
+  --version "$VERSION" \
+  --parent-version "$(python3 -c 'import csv; r=list(csv.DictReader(open("data/rsi_runs.csv"))); print(next(x["version"] for x in reversed(r) if x["current"]=="true"))')" \
+  --policy-change "Nightly lessons $(date -u +%F)" \
+  --teacher-model Nemotron \
+  --accepted false \
+  --current false
+python3 scripts/post_rsi_discord.py
 
-case "$DECISION" in
-  PROMOTE)
-    cp "$LESSONS" "$CHAMPION"
-    echo "PROMOTED: tonight's lessons are the new champion." ;;
-  ROLLBACK)
-    if [ -s "$CHAMPION" ]; then
-      docker cp "$CHAMPION" "$C:/sandbox/.openclaw/workspace/MEMORY.md"
-      echo "ROLLED BACK: champion lessons restored into the sandbox."
-    else
-      echo "ROLLBACK requested but no champion snapshot exists; holding."
-    fi ;;
-  HOLD)
-    echo "HOLD: champion unchanged; lessons stay for another night of data." ;;
-  SKIP)
-    echo "SKIP: eval was degraded (provider errors); no decision recorded tonight." ;;
-esac
-echo "trend row appended to data/rsi_runs.csv (decision: $DECISION)"
+# Optional: notify the coordinator API (friend's Railway service) so both RSI
+# tracks log in one place. Read-only trigger; failures never break the cycle.
+if [ -n "${COORDINATOR_URL:-}" ]; then
+  curl -s -m 15 "${COORDINATOR_URL%/}/api/run-research" >/dev/null \
+    && echo "coordinator notified: run-research triggered" \
+    || echo "coordinator unreachable (non-fatal)"
+fi
+echo "candidate recorded; champion unchanged pending a human Discord decision"
