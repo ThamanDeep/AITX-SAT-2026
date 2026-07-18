@@ -57,6 +57,18 @@ dumps in any Discord message.
      with a one-line reason. Tag the subscribers.
 - Keep it to one message per product; no threads unless a user replies.
 
+### Episodic memory (nightly self-improvement)
+
+A scheduled job (`episodic-memory-synthesis`, 05:00 UTC) reviews the past
+day's session transcripts and appends structured episodes to
+`memory/episodes.jsonl` (schema in docs/episodic-memory.md): request,
+agent_chain, outcome, feedback (reactions/corrections), quality, lesson.
+Rules: episodes are summaries, never raw transcripts or secrets; a lesson
+requires a real feedback signal (reaction, correction, task result), never
+self-opinion. Durable lessons get promoted into `MEMORY.md` under
+"## Learned lessons (episodic)" — max 30 bullets, merged and deduped, so
+tomorrow's sessions start smarter than today's.
+
 ### Hard rules
 
 - Max 6 inter-agent hops per request_id; then stop and summarize to the human.
