@@ -187,6 +187,8 @@ aside .eyebrow { color:var(--cyan); }
         <button class="node" data-k="golden"><span class="t"><span class="dot"></span>golden dataset</span><span class="d">15 frozen exam questions</span></button>
         <button class="node" data-k="verifiers"><span class="t"><span class="dot amber"></span>verifiers + vf-eval</span><span class="d">rollouts, rubric, reward</span></button>
         <button class="node" data-k="trend"><span class="t"><span class="dot good"></span>the trend line</span><span class="d">baseline: <span class="score">0.551 ± 0.050</span></span></button>
+        <button class="node" data-k="gate"><span class="t"><span class="dot amber"></span>the autonomous gate</span><span class="d">PROMOTE · HOLD · ROLLBACK · SKIP</span></button>
+        <button class="node" data-k="shakedown"><span class="t"><span class="dot good"></span>tonight's shakedown</span><span class="d">what the first live cycle taught us</span></button>
         <button class="node" data-k="training"><span class="t"><span class="dot bad"></span>SFT · DPO · GRPO</span><span class="d">when lessons become weights</span></button>
       </div>
     </div>
@@ -230,9 +232,20 @@ agents:["Nine agents, one orchestrator","A small company, not a lone genius.",
 internal:["Internal-only agents","Workers with no public face — on purpose.",
 `<p>Five agents (amazon, ebay, tech, speculator, sage) have <em>no Discord identity at all</em>. They can only be reached by other agents, never by a person in chat. Why? They handle retail API credentials, and things holding secrets shouldn't have a public door. Sage — the review-fraud judge — goes further: it has no network tools whatsoever. It judges evidence handed to it and can't be lured anywhere.</p>
 <p class="you"><b>In your system:</b> this is the "who can talk to whom" scaffolding you asked for — enforced in config, not by politeness.</p>`],
-crons:["The two night shifts","Your system works while you sleep.",
-`<p>A <em>cron job</em> is a scheduled task ("cron" = clock). You have two. At <b>midnight Central</b>, the memory shift reads the day's conversations and distills them into episodes and lessons. At <b>8:00 AM Central</b>, the price-watch shift fans out to the specialists, appends today's price to a history file, asks the speculator for the trend, and posts the digest to #daily.</p>
-<p class="you"><b>In your system:</b> both jobs live in the cloud gateway's scheduler (<code>gpu-daily-watch</code>, <code>episodic-memory-synthesis</code>) — your laptop can be closed.</p>`],
+crons:["The three night shifts","Your system works — and now grades itself — while you sleep.",
+`<p>A <em>cron job</em> is a scheduled task ("cron" = clock). You have three, in a deliberate order. <b>Midnight Central</b>: the memory shift distills the day's conversations into episodes and lessons. <b>12:30 AM</b>: the evaluation shift snapshots those fresh lessons, re-runs the 15-question exam with them injected, and the autonomous gate issues its verdict — promote, hold, rollback, or skip. <b>8:00 AM</b>: the price digest posts to #daily, powered by whichever memory won the night.</p>
+<p class="you"><b>In your system:</b> the first two live in the gateway scheduler; the eval shift is an EC2 host cron running <code>auto_rsi_nightly.sh</code>. Your laptop can be closed for all three.</p>`],
+gate:["The autonomous gate","The human is out of the loop — by design.",
+`<p>Promotion used to require a person marking a run accepted. That throttles RSI to human speed, so it was replaced with a statistical rule that runs every night:</p>
+<p><b>PROMOTE</b> — the candidate beats the champion by ≥0.01 <em>and</em> its confidence-interval lower bound clears the bar. Tonight's lessons become the champion snapshot.<br>
+<b>HOLD</b> — the result is inside the noise band. Champion stays; lessons keep accumulating.<br>
+<b>ROLLBACK</b> — regression &gt;0.02. The champion lessons file is automatically restored into the sandbox — a bad night of learning is undone before breakfast.<br>
+<b>SKIP</b> — fewer than 60% of rollouts came back valid (rate limits, outages). The gate refuses to decide on garbage and records nothing.</p>
+<p class="you"><b>In your system:</b> the rule lives in <code>scripts/auto_promote.py</code>; every verdict and the numbers behind it land in <code>/opt/aitx/rsi-cycles.log</code>. Humans audit; they never gate.</p>`],
+shakedown:["Tonight's shakedown","The first live cycle — and why its failure was a success.",
+`<p>The very first unattended cycle ran today and immediately earned its keep. NVIDIA rate-limited the burst: 34 of 45 rollouts errored. The naive gate averaged those errors as zeros, computed a terrible score, and ordered a rollback — <em>which the no-champion guard correctly refused to execute.</em> No damage. The gate was then hardened: errored rollouts are excluded from statistics, and a degraded eval now yields SKIP instead of a verdict.</p>
+<p>Buried in the noise, the first real signal: the <b>11 valid rollouts scored <span class="score">0.682</span></b> against the memory-off baseline of <span class="score">0.551</span>. Too few samples to claim victory — but it points the right way.</p>
+<p class="you"><b>In your system:</b> the first fully organic cycle — real chats, fresh lessons, hardened gate — runs tonight at 12:30 AM Central. Check the trend line when you wake up.</p>`],
 episodes:["episodes.jsonl — episodic memory","A diary, one entry per interaction.",
 `<p><em>Episodic memory</em> means remembering specific events ("Tuesday, someone asked X, we did Y, they reacted Z") rather than general facts. Every night, each meaningful interaction becomes one JSON record: what was asked, which agents handled it, what was delivered, the human feedback, a good/bad/neutral grade, and — only when feedback justifies it — a lesson. Summaries only; never raw transcripts or secrets.</p>
 <p class="you"><b>In your system:</b> the file also feeds two machines downstream: the lesson promoter (next node) and the teacher-model dataset exporter.</p>`],
@@ -260,7 +273,7 @@ training:["SFT · DPO · GRPO","When notes-to-self become permanent skill.",
 };
 
 const chipsEl = document.getElementById('chips');
-const order = ["channels","bots","reactions","sandbox","agents","internal","crons","episodes","lessons","verbalrl","golden","verifiers","trend","training"];
+const order = ["channels","bots","reactions","sandbox","agents","internal","crons","episodes","lessons","verbalrl","golden","verifiers","trend","gate","shakedown","training"];
 for (const k of order){
   const b=document.createElement('button'); b.className='chip'; b.textContent=D[k][0].split('—')[0].trim();
   b.onclick=()=>show(k); chipsEl.appendChild(b);
@@ -317,7 +330,8 @@ const TOUR=[
  ["episodes","At midnight the memory shift files the whole exchange as an episode: request, agents involved, outcome, grade, lesson."],
  ["lessons","The lesson (“weekend-delivery requests: prefer retailers with 2-day shipping”) is promoted into MEMORY.md. Tomorrow every agent wakes up knowing it."],
  ["verifiers","To prove it helped, vf-eval re-runs the same 15-question exam with the new lessons injected — 45 rollouts, graded by the rubric."],
- ["trend","The score lands as a new point next to 0.551. If it's higher — with the confidence interval clear — a human promotes it. That closed loop, running nightly, is recursive self-improvement."]];
+ ["gate","At 12:30 AM the autonomous gate compares the score to the champion: promote on a clear gain, roll back a regression, skip a broken eval. No human touches it."],
+ ["trend","The verdict lands as a new point next to 0.551 on the trend line. That closed loop — chat, remember, re-examine, self-promote — running nightly with humans only auditing, is recursive self-improvement."]];
 let ti=0; const tb=document.getElementById('tourBox');
 function tShow(){ const [k,txt]=TOUR[ti]; show(k);
   document.getElementById('tourStep').textContent=`Step ${ti+1} of ${TOUR.length}`;
