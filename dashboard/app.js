@@ -778,6 +778,54 @@ async function checkBackendConnection() {
     }
 }
 
+// Render Episodic Memory (Hermes compressed episodes)
+async function renderEpisodicMemory() {
+    const container = document.getElementById("episodic-memory-container");
+    if (!container) return;
+    container.innerHTML = "";
+    
+    let episodes = [];
+    try {
+        const url = isLiveServerMode ? `${SERVER_URL}/api/episodic-memory` : "episodic_memory.json";
+        const response = await fetch(url);
+        if (response.ok) {
+            episodes = await response.json();
+        }
+    } catch (e) {
+        // Fail gracefully
+    }
+    
+    if (episodes.length === 0) {
+        episodes = [
+            {
+                id: "EP-01",
+                date: "Day 1 (10:14)",
+                task: "Sourcing ASUS ROG Strix RTX 5080",
+                compression: "Evaluated open-box reseller listings on eBay ($1,050) vs. authorized retail listings on Amazon ($1,199). SAGE auditor cross-referenced the brand warranty clause: ASUS voids warranty transfers for secondhand resellers. Episodic memory compressed this as a high-priority sourcing constraint.",
+                outcome: "Selected Amazon Retail ($1,199) to preserve full manufacturer warranty, avoiding a $150 voided-value deficit."
+            },
+            {
+                id: "EP-02",
+                date: "Day 1 (15:20)",
+                task: "Bulk Procurement of 20x Corsair Vengeance RAM",
+                compression: "Piped a request for 20 identical RAM modules with a hard 3-day delivery deadline. Evaluated Alibaba wholesale ($700) vs. Newegg Business ($1,580). Alibaba required 12-day custom clearance. Speculator agent flagged the delivery constraint, forcing path optimization to domestic shipping.",
+                outcome: "Selected Newegg Business ($1,580) with 2-day delivery guaranteed. Alibaba option rejected due to deadline violation."
+            }
+        ];
+    }
+    
+    episodes.forEach(ep => {
+        const card = document.createElement("div");
+        card.className = "lesson-card";
+        card.innerHTML = `
+            <span class="lesson-meta">${ep.date} // Episode: ${ep.id} - ${ep.task}</span>
+            <p class="lesson-text" style="margin-bottom: 8px;"><strong>Compressed Memory Context:</strong> "${ep.compression}"</p>
+            <p class="lesson-text" style="color: var(--accent); font-weight: bold;"><strong>Resolution Outcome:</strong> "${ep.outcome}"</p>
+        `;
+        container.appendChild(card);
+    });
+}
+
 // Event Listeners Initialization
 document.addEventListener("DOMContentLoaded", async () => {
     populateSelects();
@@ -785,6 +833,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await renderLeaderboard();
     await renderSVGChart();
     renderReflections();
+    await renderEpisodicMemory();
     
     document.getElementById("run-test-btn").addEventListener("click", runTestSimulation);
     document.getElementById("reset-db-btn").addEventListener("click", resetDatabase);

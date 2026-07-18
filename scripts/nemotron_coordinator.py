@@ -237,6 +237,17 @@ class CoordinatorAPIHandler(BaseHTTPRequestHandler):
             else:
                 self.wfile.write(json.dumps([]).encode())
                 
+        elif parsed_path.path == "/api/episodic-memory":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            memory_file = os.path.join(BASE_DIR, "dashboard", "episodic_memory.json")
+            if os.path.exists(memory_file):
+                with open(memory_file, "r") as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self.wfile.write(json.dumps([]).encode())
+                
         elif parsed_path.path == "/api/run-research":
             if coordinator_status == "idle":
                 # Start loop in background thread
