@@ -139,10 +139,17 @@ FAILURES FROM LAST EVALUATION:
 Write an improved lessons file: <=20 tight bullet rules, generalized from the
 failures, no test-case IDs or memorized answers, markdown bullets only.
 Reply with ONLY the new lessons file content."""
-    text, _ = chat("https://opencode.ai/zen/v1", OPENCODE_KEY,
-                   os.environ.get("RESEARCHER_MODEL", "deepseek-v4-pro"),
-                   "You improve policy instruction files. Output only the file content.",
-                   prompt, timeout=180)
+    sys_msg = "You improve policy instruction files. Output only the file content."
+    try:
+        text, _ = chat("https://opencode.ai/zen/v1", OPENCODE_KEY,
+                       os.environ.get("RESEARCHER_MODEL", "nemotron-3-ultra-free"),
+                       sys_msg, prompt, timeout=240)
+    except Exception:
+        # opencode credits/outage: fall back to NVIDIA (then OpenRouter via judge path)
+        text, _ = chat("https://integrate.api.nvidia.com/v1", NVIDIA_KEY,
+                       "nvidia/nemotron-3-super-120b-a12b", sys_msg, prompt, timeout=240)
+    # strip <think> blocks reasoning models may emit
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     return text.strip()
 
 
