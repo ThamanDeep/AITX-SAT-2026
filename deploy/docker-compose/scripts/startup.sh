@@ -34,6 +34,22 @@ if [ -n "$C" ]; then
     cat /tmp/AGENTS.base.md /tmp/AGENTS.team.md > $WS/AGENTS.md
     rm /tmp/AGENTS.base.md /tmp/AGENTS.team.md"
   echo "[startup] identity injected into $C"
+
+  if [ -n "${DISCORD_BOT_TOKEN_SCOUT:-}" ]; then
+    echo "[startup] wiring per-agent Discord bots (multi-account hot reload)"
+    printf '{"scout":"%s","inspector":"%s","concierge":"%s"}' \
+      "$DISCORD_BOT_TOKEN_SCOUT" "$DISCORD_BOT_TOKEN_INSPECTOR" "$DISCORD_BOT_TOKEN_CONCIERGE" \
+    | docker exec -i "$C" node -e '
+      let raw="";process.stdin.on("data",d=>raw+=d).on("end",()=>{
+        const toks=JSON.parse(raw);const fs=require("fs");
+        const p="/sandbox/.openclaw/openclaw.json";
+        const cfg=JSON.parse(fs.readFileSync(p,"utf8"));
+        for(const id of ["scout","inspector","concierge"])
+          cfg.channels.discord.accounts[id]={token:toks[id],enabled:true,healthMonitor:{enabled:false}};
+        cfg.bindings=["scout","inspector","concierge"].map(id=>({agentId:id,match:{channel:"discord",accountId:id}}));
+        fs.writeFileSync(p,JSON.stringify(cfg,null,2));
+        console.log("[startup] discord accounts wired");});'
+  fi
 else
   echo "[startup] WARNING: sandbox container not found; identity not injected"
 fi

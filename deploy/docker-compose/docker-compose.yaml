@@ -23,8 +23,11 @@ services:
       # Web search
       NEMOCLAW_WEB_SEARCH_PROVIDER: ${NEMOCLAW_WEB_SEARCH_PROVIDER:-tavily}
       TAVILY_API_KEY: ${TAVILY_API_KEY}
-      # Discord
+      # Discord (main bot + per-agent bots)
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DISCORD_BOT_TOKEN_SCOUT: ${DISCORD_BOT_TOKEN_SCOUT:-}
+      DISCORD_BOT_TOKEN_INSPECTOR: ${DISCORD_BOT_TOKEN_INSPECTOR:-}
+      DISCORD_BOT_TOKEN_CONCIERGE: ${DISCORD_BOT_TOKEN_CONCIERGE:-}
       DISCORD_SERVER_ID: ${DISCORD_SERVER_ID}
       DISCORD_REQUIRE_MENTION: ${DISCORD_REQUIRE_MENTION:-1}
       # Gateway/dashboard ports (change for multi-stack hosts)
