@@ -1,280 +1,280 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NemoClaw Agent Arena // Auto-Research & Benchmark</title>
-    <!-- CSS Stylesheet -->
-    <link rel="stylesheet" href="style.css">
-    <!-- FontAwesome for Premium Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Orbitron & Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@500;700;900&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Decision Frontier helps people choose when and where to buy GPUs, RAM, and MacBooks.">
+  <meta name="dashboard-api" content="http://127.0.0.1:8787">
+  <title>Decision Frontier — Buy at the right price</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="layout-fixes.css?v=5">
 </head>
 <body>
-    <!-- Ambient Sci-Fi Scanning Effects -->
-    <div id="scanlines"></div>
-    <div id="glow-overlay"></div>
+  <aside class="rail" aria-label="Primary navigation">
+    <a class="brand" href="#dashboard" aria-label="Decision Frontier home">
+      <span class="brand-mark"><i class="fa-solid fa-crosshairs"></i></span>
+      <span>Decision<br>Frontier</span>
+    </a>
 
-    <header class="app-header">
-        <div class="container header-container">
-            <div class="logo-area">
-                <span class="pulse-dot"></span>
-                <h1>NEMOCLAW_ARENA<span class="blink">_</span></h1>
-                <span class="system-status">SYS.LOC: ACTIVE // AUTO_RESEARCH: READY</span>
-            </div>
-            <div class="header-actions">
-                <button id="reset-db-btn" class="btn text-btn" title="Reset evaluations to original defaults"><i class="fa-solid fa-rotate-left"></i> Reset Arena</button>
-                <span class="version-badge">AutoResearch v1.2</span>
-            </div>
-        </div>
+    <nav class="primary-nav">
+      <button class="nav-link active" data-page="dashboard"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></button>
+      <button class="nav-link" data-page="deals"><i class="fa-solid fa-tags"></i><span>Deals</span><b>18</b></button>
+      <button class="nav-link" data-page="forecasts"><i class="fa-solid fa-chart-line"></i><span>Forecasts</span></button>
+      <button class="nav-link" data-page="leaderboard"><i class="fa-solid fa-ranking-star"></i><span>Leaderboard</span></button>
+      <button class="nav-link" data-page="methodology"><i class="fa-solid fa-diagram-project"></i><span>Methodology</span></button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="training-window">
+        <span><i class="fa-solid fa-moon"></i> Night lab</span>
+        <strong>12:00 AM–7:00 AM</strong>
+        <small>Next run tonight</small>
+      </div>
+      <button class="nav-link" id="alerts-button"><i class="fa-regular fa-bell"></i><span>Alerts</span><b id="alert-count">3</b></button>
+      <button class="nav-link" data-page="settings"><i class="fa-solid fa-sliders"></i><span>Settings</span></button>
+    </div>
+  </aside>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobile-menu" aria-label="Open navigation"><i class="fa-solid fa-bars"></i></button>
+      <p id="sync-status"><span class="live-dot"></span> Connecting to hosted Supabase…</p>
+      <div>
+        <button class="icon-button" id="theme-button" aria-label="Toggle high contrast"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        <button class="avatar" aria-label="Open account menu">TK</button>
+      </div>
     </header>
 
-    <main class="container main-layout">
-        
-        <!-- TOP SECTION: Metrics & Visual Bar Graphs -->
-        <section class="dashboard-grid">
-            
-            <!-- Left Card: Arena Leaderboard (Model comparisons) -->
-            <div class="dashboard-card glass-card span-8">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-trophy text-accent"></i>
-                        <h2>Model Leaderboard (Universal Arena)</h2>
-                    </div>
-                    <span class="subtitle">Ranked by Weighted Value Score ($Value = 0.3A + 0.15S + 0.2P + 0.15R + 0.2C$)</span>
-                </div>
-                <div class="card-body">
-                    <table class="arena-table" id="leaderboard-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Agent / Version</th>
-                                <th>Value</th>
-                                <th>Accuracy (A)</th>
-                                <th>Speed (S)</th>
-                                <th>Platform (P)</th>
-                                <th>Retrieval (R)</th>
-                                <th>Safety (C)</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Dynamic rows loaded via app.js -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Right Card: 48-Hour Growth Comparison Graph -->
-            <div class="dashboard-card glass-card span-4">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-chart-line text-accent"></i>
-                        <h2>Recursive Growth Trend</h2>
-                    </div>
-                    <span class="subtitle">Self-improvement curve over successive runs</span>
-                </div>
-                <div class="card-body centered-content flex-column">
-                    <!-- Dynamic SVG chart rendering target -->
-                    <div class="chart-container" id="svg-chart-wrapper">
-                        <!-- Chart rendered by JS -->
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- MIDDLE SECTION: Auto-Research Lab -->
-        <section class="dashboard-grid margin-top">
-            <div class="dashboard-card glass-card span-12">
-                <div class="card-header flex-header">
-                    <div>
-                        <div class="card-title">
-                            <i class="fa-solid fa-microscope text-accent"></i>
-                            <h2>Agent Auto-Research Experiment Lab</h2>
-                        </div>
-                        <span class="subtitle">Enables the agent to recursively run tests, evaluate mistakes, mutate its own prompts, and optimize scores</span>
-                    </div>
-                    <div class="experiment-actions">
-                        <button id="run-research-btn" class="btn primary-btn"><i class="fa-solid fa-flask"></i> Start Auto-Research Loop</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="research-layout">
-                        <!-- Left Console: Research Steps -->
-                        <div class="console-box flex-grow-1">
-                            <div class="console-header">
-                                <span class="console-tab">auto_research_scientist.log</span>
-                                <div class="console-status" id="research-status">IDLE</div>
-                            </div>
-                            <div class="console-body" id="research-console">
-                                <p class="console-meta">&gt; Auto-Research Scientist agent is idle. Click 'Start Auto-Research Loop' to initiate the self-improvement cycle...</p>
-                            </div>
-                        </div>
-
-                        <!-- Right Panel: Current Mutated Prompts -->
-                        <div class="mutated-prompt-box">
-                            <div class="box-title">CURRENT OPTIMIZED PROMPT SYSTEM</div>
-                            <div class="prompt-display" id="mutated-prompt-display">
-                                [System Instruction Profile (Active)]
-Choose the most secure platform. Avoid unauthorized resellers on eBay for new hardware. Track hidden fees. Check if RAM listings on Wish are scams...
-                            </div>
-                            <div class="prompt-metrics">
-                                <span class="badge badge-active" id="active-mutation-tag">Version 1.0 (Base)</span>
-                                <span class="prompt-score-tag" id="active-mutation-score">Score: 56/100</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- BOTTOM SECTION: Interactive Test Runner & Manual Grading Panel -->
-        <section class="dashboard-grid margin-top">
-
-            <!-- Interactive Live Test Case Runner (Demo Driver) -->
-            <div class="dashboard-card glass-card span-7">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-terminal text-accent"></i>
-                        <h2>Interactive Golden Test Runner</h2>
-                    </div>
-                    <span class="subtitle">Select a hardware scenario to simulate the multi-agent consensus debate</span>
-                </div>
-                <div class="card-body">
-                    <div class="runner-controls">
-                        <label for="test-select" class="sr-only">Choose Test Case</label>
-                        <select id="test-select" class="form-select">
-                            <!-- Options populated dynamically from JS -->
-                        </select>
-                        <button id="run-test-btn" class="btn secondary-btn"><i class="fa-solid fa-play"></i> Run Test</button>
-                    </div>
-
-                    <div class="console-box">
-                        <div class="console-header">
-                            <span class="console-tab">console_output.log</span>
-                            <div class="console-status" id="runner-status">IDLE</div>
-                        </div>
-                        <div class="console-body" id="console-output">
-                            <p class="console-meta">&gt; Ready to execute. Select a hardware case and click 'Run Test'...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Manual Grading Panel & Input Form -->
-            <div class="dashboard-card glass-card span-5">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-pen-to-square text-accent"></i>
-                        <h2>Manual Evaluation logger</h2>
-                    </div>
-                    <span class="subtitle">Record manual grades directly into the Arena database</span>
-                </div>
-                <div class="card-body">
-                    <form id="grading-form" class="grading-form">
-                        <div class="form-group">
-                            <label for="eval-version">Agent Version:</label>
-                            <select id="eval-version" class="form-select" required>
-                                <option value="Snapshot v1.0 (Day 0 Baseline)">Snapshot v1.0 (Day 0 Baseline)</option>
-                                <option value="Snapshot v1.1 (Day 2 Reflexion)">Snapshot v1.1 (Day 2 Reflexion)</option>
-                                <option value="GPT-4o (Standard Scraper)">GPT-4o (Standard Scraper)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="eval-case">Test Scenario:</label>
-                            <select id="eval-case" class="form-select" required>
-                                <!-- Options populated dynamically from JS -->
-                            </select>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="score-accuracy">Accuracy (A):</label>
-                                <select id="score-accuracy" class="form-select" required>
-                                    <option value="100">100 (Error <= 1%)</option>
-                                    <option value="50">50 (Error <= 10%)</option>
-                                    <option value="0">0 (Error > 10%)</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="score-speed">Speed (S):</label>
-                                <select id="score-speed" class="form-select" required>
-                                    <option value="100">100 (Within 5 mins)</option>
-                                    <option value="50">50 (Within 1 hour)</option>
-                                    <option value="0">0 (Missed / Slow)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="score-platform">Platform (P):</label>
-                                <select id="score-platform" class="form-select" required>
-                                    <option value="100">100 (Ideal Sourcing)</option>
-                                    <option value="50">50 (Sub-optimal)</option>
-                                    <option value="0">0 (Wrong Platform)</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="score-retrieval">Retrieval (R):</label>
-                                <select id="score-retrieval" class="form-select" required>
-                                    <option value="100">100 (No Scraping Block)</option>
-                                    <option value="50">50 (Partially Cached)</option>
-                                    <option value="0">0 (Connection Denied)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="score-safety">Safety/Counterfeit (C):</label>
-                            <select id="score-safety" class="form-select" required>
-                                <option value="100">100 (Identified Scams)</option>
-                                <option value="50">50 (Vague Warning)</option>
-                                <option value="0">0 (No Flag/Scam Recommended)</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn secondary-btn full-width"><i class="fa-solid fa-floppy-disk"></i> Log Evaluation</button>
-                    </form>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- DETAILED TAB: Sage Reflection Lessons -->
-        <section class="dashboard-grid margin-top margin-bottom">
-            <div class="dashboard-card glass-card span-12">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-brain text-accent"></i>
-                        <h2>Sage (Review Auditor) - Accumulated Reflections</h2>
-                    </div>
-                    <span class="subtitle">Rule-based optimizations written dynamically by the Critic during interactions</span>
-                </div>
-                <div class="card-body">
-                    <div class="lessons-grid" id="lessons-container">
-                        <!-- Lessons loaded by JS -->
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="app-footer">
-        <div class="container footer-content">
-            <p>&copy; 2026 NemoClaw Agent Arena Dashboard. Hackathon Prototype. Under lock and sandbox.</p>
+    <section class="page active" id="dashboard-page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Your buying decision desk</p>
+          <h1>Wait for the right price, <em>not forever.</em></h1>
+          <p>One decision signal across verified listings, price history, and your deadline.</p>
         </div>
-    </footer>
+        <span class="data-badge" id="data-badge"><i class="fa-solid fa-database"></i> Connecting</span>
+      </div>
 
-    <!-- App JavaScript -->
-    <script src="app.js"></script>
+      <form class="watch-bar" id="watch-form">
+        <label>Watching
+          <select id="product-select">
+            <option value="gpu">RTX 5090 GPUs</option>
+            <option value="macbook">MacBooks</option>
+            <option value="ram">DDR5 RAM</option>
+          </select>
+        </label>
+        <label>Target price
+          <span class="money-input"><span>$</span><input id="target-price" type="number" value="3499" min="1"></span>
+        </label>
+        <label>Buy by
+          <input id="deadline" type="date" value="2026-08-18">
+        </label>
+        <button class="primary-button" type="submit"><i class="fa-solid fa-rotate"></i> Update watch</button>
+      </form>
+
+      <article class="decision-strip">
+        <div class="decision-call">
+          <span class="status wait" id="decision-status">WAIT</span>
+          <div><small>Decision today</small><strong id="decision-copy">Target likely within 3 weeks</strong></div>
+        </div>
+        <dl>
+          <div><dt>Best verified</dt><dd id="best-price">$3,899</dd></div>
+          <div><dt>Your target</dt><dd id="target-display">$3,499</dd></div>
+          <div><dt>30-day range</dt><dd id="range-display">$3,399–$4,199</dd></div>
+          <div><dt>Live listings</dt><dd><span class="confidence" id="live-listing-count">—</span></dd></div>
+        </dl>
+        <button class="text-action" data-page="methodology">Why this call <i class="fa-solid fa-arrow-right"></i></button>
+      </article>
+
+      <div class="dashboard-grid">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Current market evidence</p><h2 id="chart-title">RTX 5090 price spread</h2></div>
+            <div class="segmented" role="group" aria-label="Listing count">
+              <button class="active" data-range="3">Top 3</button><button data-range="6">Top 6</button><button data-range="99">All</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="price-chart" aria-label="Price history and forecast chart"></canvas></div>
+          <div class="chart-legend"><span><i class="actual"></i> Supabase listing</span><span><i class="target"></i> Your target</span></div>
+        </article>
+
+        <article class="panel listings-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Live retrieval</p><h2>Verified prices</h2></div>
+            <button class="text-action" data-page="deals">All deals <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <div class="listing-list" id="listing-list"></div>
+          <p class="panel-note"><i class="fa-solid fa-circle-info"></i> Landed prices include estimated shipping. Verify tax and availability at checkout.</p>
+        </article>
+      </div>
+
+      <div class="metric-row">
+        <article><i class="fa-solid fa-tags"></i><div><small>Live listings</small><strong id="metric-listings">—</strong><span>Sandbox rows excluded</span></div></article>
+        <article><i class="fa-solid fa-store"></i><div><small>Live sources</small><strong id="metric-sources">—</strong><span id="metric-source-names">Hosted Supabase</span></div></article>
+        <article><i class="fa-solid fa-rotate"></i><div><small>Successful syncs</small><strong id="metric-syncs">—</strong><span id="metric-last-sync">Checking…</span></div></article>
+        <article class="plain-note"><strong>Live marketplace data</strong><p>Read through the local API from hosted Supabase. Prices remain subject to checkout verification.</p></article>
+      </div>
+    </section>
+
+    <section class="page" id="deals-page">
+      <div class="page-head compact">
+        <div><p class="eyebrow">Marketplace retrieval</p><h1>Deals worth checking.</h1><p>GPU, RAM, and MacBook listings only.</p></div>
+        <span class="data-badge"><i class="fa-solid fa-database"></i> Live Supabase</span>
+      </div>
+      <div class="filter-row" role="group" aria-label="Deal filters">
+        <button class="filter-chip active" data-filter="all">All</button><button class="filter-chip" data-filter="gpu">GPU</button><button class="filter-chip" data-filter="macbook">MacBook</button><button class="filter-chip" data-filter="ram">RAM</button>
+      </div>
+      <div class="deal-grid" id="deal-grid"></div>
+    </section>
+
+    <section class="page" id="forecasts-page">
+      <div class="page-head compact">
+        <div><p class="eyebrow">Forecast desk</p><h1>Signals, not promises.</h1><p>Price direction with uncertainty, deadlines, and known market catalysts.</p></div>
+      </div>
+      <div class="forecast-grid">
+        <article class="forecast-hero">
+          <p class="eyebrow">30-day model outlook</p><h2>RTX 5090 prices may soften before August.</h2>
+          <p>Current listing spread is wide and verified supply is improving. The recommendation stays WAIT while the probability of landing below $3,600 remains above the configured threshold.</p>
+          <dl><div><dt>Forecast</dt><dd>−7.8%</dd></div><div><dt>80% interval</dt><dd>−14% to +3%</dd></div><div><dt>Next review</dt><dd>24 hours</dd></div></dl>
+        </article>
+        <aside class="forecast-aside"><h3>Promotion gate</h3><ol><li>Rolling-origin backtest</li><li>No future data leakage</li><li>Calibrated intervals</li><li>Champion beats baseline</li></ol><button class="secondary-button" data-page="methodology">See evaluation method</button></aside>
+      </div>
+    </section>
+
+    <section class="page" id="leaderboard-page">
+      <div class="page-head compact leaderboard-head">
+        <div><p class="eyebrow">Commerce agent benchmark</p><h1>Leaderboard</h1><p>Compare decision quality, retrieval, speed, and trust on the same held-out cases.</p></div>
+        <span class="edition" id="improvement-evidence">Loading evaluation history…</span>
+      </div>
+
+      <div class="benchmark-bar">
+        <label>Benchmark
+          <select id="benchmark-select"><option>PC Purchase Decisions</option><option>Price Retrieval</option><option>Forecast Calibration</option></select>
+        </label>
+        <label>Dataset
+          <select><option>Golden set · held-out</option><option>Golden set · development</option></select>
+        </label>
+        <button class="primary-button" id="run-evaluation"><i class="fa-solid fa-rotate"></i> Refresh history</button>
+      </div>
+
+      <article class="leaderboard-card">
+        <div class="table-intro">
+          <div><span class="live-dot"></span><strong id="benchmark-label">PC Purchase Decisions</strong><small id="benchmark-note">95% confidence intervals · loading</small></div>
+          <button class="text-action" data-page="methodology">How scoring works <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+        <div class="table-scroll">
+          <table class="leaderboard-table">
+            <thead><tr><th>Rank</th><th>Version</th><th>Decision quality<small>Higher is better</small></th><th>Landed-price error<small>Lower is better</small></th><th>Median latency<small>Seconds</small></th><th>Valid URL rate<small>Higher is better</small></th><th>Unsupported claims<small>Lower is better</small></th><th>Price-forecast regret<small>USD · lower is better</small></th></tr></thead>
+            <tbody id="improvement-table"><tr><td colspan="8">Loading evaluation history…</td></tr></tbody>
+          </table>
+        </div>
+        <footer class="comparison-legend"><span><i class="better"></i> Better than baseline</span><span><i class="worse"></i> Worse than baseline</span><span>— No meaningful change</span></footer>
+      </article>
+
+      <div class="improvement-visuals">
+        <article class="panel improvement-chart-panel">
+          <div class="panel-head"><div><p class="eyebrow">Recursive improvement</p><h2>Policy quality rises as regret falls</h2></div><span class="data-badge">Prototype benchmark</span></div>
+          <div class="improvement-chart-wrap"><canvas id="improvement-chart" aria-label="Recursive self-improvement chart"></canvas></div>
+        </article>
+        <article class="improvement-summary" id="improvement-summary"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading policy deltas…</p></article>
+      </div>
+
+      <div class="arena-method">
+        <div><span>01</span><h3>Same cases</h3><p>Every policy sees the same frozen purchase scenarios.</p></div>
+        <i class="fa-solid fa-arrow-right"></i>
+        <div><span>02</span><h3>Independent rubrics</h3><p>Verifiers score claims, links, latency, and decisions.</p></div>
+        <i class="fa-solid fa-arrow-right"></i>
+        <div><span>03</span><h3>Promotion gate</h3><p>A challenger ships only when it improves without regression.</p></div>
+      </div>
+    </section>
+
+    <section class="page methodology" id="methodology-page">
+      <div class="method-hero">
+        <p class="eyebrow">How the system learns</p>
+        <h1>Seven quiet hours.<br><em>One safer policy by morning.</em></h1>
+        <p>Every night, commerce agents test new ways to retrieve evidence and make buy-or-wait decisions. Nemotron teaches from failures; Verifiers decides what actually improved.</p>
+        <div class="method-facts"><span><b>15</b> golden cases today</span><span><b>7h</b> nightly window</span><span><b>1</b> promoted champion</span></div>
+      </div>
+
+      <article class="overnight">
+        <div class="section-title"><p class="eyebrow">The nightly evolution loop</p><h2>12:00 AM → 7:00 AM</h2><p>Production target · current repository behavior remains a simulation until this pipeline is fully wired.</p></div>
+        <ol class="night-timeline">
+          <li><time>12:00</time><i class="fa-solid fa-lock"></i><div><h3>Freeze the world</h3><p>Snapshot listings, policy version, golden dataset, and retrieval index so every candidate receives the same evidence.</p></div></li>
+          <li><time>1:00</time><i class="fa-solid fa-globe"></i><div><h3>Agents explore</h3><p>Scout, Inspector, Speculator, and marketplace agents browse allowed sources, retrieve URLs, and run purchase cases.</p></div></li>
+          <li><time>3:00</time><i class="fa-solid fa-scale-balanced"></i><div><h3>Verifiers score</h3><p>Rubrics grade decision accuracy, landed price, source validity, retrieval recall, latency, hallucination, and deadline regret.</p></div></li>
+          <li><time>4:30</time><i class="fa-solid fa-chalkboard-user"></i><div><h3>Nemotron teaches</h3><p>The main teacher reviews failure traces and proposes one focused change to the prompt, tool routing, memory, or retrieval policy.</p></div></li>
+          <li><time>5:30</time><i class="fa-solid fa-vial-circle-check"></i><div><h3>Challenge the candidate</h3><p>Held-out cases, hard-case mining, memory-on/off ablations, and rolling-origin price backtests check whether the gain is real.</p></div></li>
+          <li><time>6:30</time><i class="fa-solid fa-trophy"></i><div><h3>Promote or roll back</h3><p>The challenger becomes champion only if confidence, safety, URL validity, and regression gates all pass.</p></div></li>
+          <li><time>7:00</time><i class="fa-solid fa-sun"></i><div><h3>Publish the morning policy</h3><p>Version the winning policy, attach an evaluation report, update the leaderboard, and keep the prior champion ready for rollback.</p></div></li>
+        </ol>
+      </article>
+
+      <article class="policy-map">
+        <div class="section-title"><p class="eyebrow">What is being improved</p><h2>The policy is more than a prompt.</h2></div>
+        <div class="policy-flow">
+          <div class="flow-node input"><span>Input</span><i class="fa-regular fa-message"></i><h3>Purchase goal</h3><p>Product, budget, condition, location, and deadline</p></div>
+          <i class="fa-solid fa-arrow-right flow-arrow"></i>
+          <div class="flow-node policy"><span>Policy π</span><i class="fa-solid fa-route"></i><h3>Next best action</h3><p>Prompt + memory + retrieval query + tool routing + buy/wait rule</p></div>
+          <i class="fa-solid fa-arrow-right flow-arrow"></i>
+          <div class="flow-node output"><span>Output</span><i class="fa-solid fa-receipt"></i><h3>Evidence-backed call</h3><p>Recommendation, verified URLs, forecast, and uncertainty</p></div>
+        </div>
+        <p class="definition"><strong>Optimization target:</strong> improve the agent harness and retrieval accuracy together—make difficult cases useful, answers fast, URLs real, claims supported, and decisions less costly.</p>
+      </article>
+
+      <article class="verifier-section">
+        <div class="section-title"><p class="eyebrow">The evaluation contract</p><h2>Reward evidence, not eloquence.</h2><p>Prime Intellect Verifiers packages each task with a dataset, environment, tools, and rubric. Multiple rewards become one promotion decision.</p></div>
+        <div class="score-grid">
+          <div><span>30%</span><i class="fa-solid fa-check-double"></i><h3>Decision quality</h3><p>Correct buy, wait, or abstain call against the golden answer.</p></div>
+          <div><span>20%</span><i class="fa-solid fa-link"></i><h3>Retrieval accuracy</h3><p>Relevant products, correct variants, valid pages, and enough coverage.</p></div>
+          <div><span>15%</span><i class="fa-solid fa-tag"></i><h3>Landed-price error</h3><p>Price, shipping, condition, and seller costs match checkout reality.</p></div>
+          <div><span>15%</span><i class="fa-solid fa-shield"></i><h3>Groundedness</h3><p>Claims trace to retrieved evidence; unsupported claims fail.</p></div>
+          <div><span>10%</span><i class="fa-solid fa-gauge-high"></i><h3>Latency</h3><p>Useful answer within the response budget.</p></div>
+          <div><span>10%</span><i class="fa-solid fa-hourglass-half"></i><h3>Decision regret</h3><p>Penalize waiting too long or buying before a better window.</p></div>
+        </div>
+      </article>
+
+      <article class="dataset-section">
+        <div class="section-title"><p class="eyebrow">Data discipline</p><h2>Golden cases teach. Held-out cases judge.</h2></div>
+        <div class="dataset-visual">
+          <div><i class="fa-solid fa-database"></i><strong>Golden dataset</strong><span>GPU · MacBook · RAM</span><small>Human-reviewed purchase cases</small></div>
+          <i class="fa-solid fa-code-branch"></i>
+          <div class="split-stack">
+            <p><b>Train / dev</b><span>Reflection + policy mutations</span></p>
+            <p><b>Validation</b><span>Early stopping + model selection</span></p>
+            <p><b>Held-out test</b><span>Promotion only; never teacher feedback</span></p>
+          </div>
+          <i class="fa-solid fa-arrow-right"></i>
+          <div><i class="fa-solid fa-medal"></i><strong>Champion gate</strong><span>Improve with confidence</span><small>No safety or URL regressions</small></div>
+        </div>
+      </article>
+
+      <article class="truth-box">
+        <i class="fa-solid fa-circle-info"></i>
+        <div><h2>What is real today?</h2><p>The repository contains a 15-case golden dataset, scoring scripts, a coordinator, and simulated improvement iterations. It does <strong>not yet prove</strong> autonomous overnight learning. This methodology is the implementation contract: connect live Verifiers rollouts, freeze held-out tests, then publish only measured runs.</p></div>
+      </article>
+
+      <footer class="source-list">
+        <p>Method references</p>
+        <a href="https://docs.primeintellect.ai/verifiers/environments" target="_blank" rel="noreferrer">Prime Intellect Verifiers <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://docs.primeintellect.ai/verifiers/training" target="_blank" rel="noreferrer">Training &amp; GEPA <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://arena.ai/blog/agent-arena-methodology/" target="_blank" rel="noreferrer">Arena methodology <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noreferrer">Reflexion <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://otexts.com/fpp3/tscv.html" target="_blank" rel="noreferrer">Time-series validation <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      </footer>
+    </section>
+
+    <section class="page simple-page" id="settings-page">
+      <div class="page-head compact"><div><p class="eyebrow">Workspace</p><h1>Settings</h1><p>Configure retrieval, notifications, and nightly evaluation.</p></div></div>
+      <article class="settings-panel"><h2>Nightly research</h2><label><span>Training window<small>Daily, America/Chicago</small></span><input value="12:00 AM – 7:00 AM" readonly></label><label><span>Teacher model<small>Main reflection and critique model</small></span><input value="Nemotron" readonly></label><label><span>Promotion mode<small>Require held-out improvement</small></span><button class="toggle active" aria-label="Toggle promotion gate"><span></span></button></label></article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

@@ -71,6 +71,18 @@ identifiers, current listings, price observations, user watchlists, and sync
 runs. Row-level security permits authenticated catalog reads and restricts
 watchlists to their owner; ingestion writes use the server-only service role.
 
+Temporary combined ingestion command:
+
+```bash
+python3 scripts/ingest_marketplace.py "RTX 5090" --limit 3
+```
+
+eBay Browse rows are recorded as `collection_method:api`. Best Buy merchant
+rows collected through Apify remain labeled `collection_method:scraped`; the
+merchant name does not imply use of Best Buy's official API.
+The temporary loader accepts only GPU, MacBook, and RAM searches and discards
+returned items that do not match one of those categories.
+
 ## 4. Who talks to whom (enforced, not aspirational)
 
 Delegation allowlists live in `config/agents.yaml`; Discord exposure is
