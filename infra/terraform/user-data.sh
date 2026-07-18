@@ -14,6 +14,24 @@ install -d -o ubuntu -g ubuntu /opt/aitx
 sudo -u ubuntu git clone https://github.com/Tar-ive/AITX-SAT-2026.git /opt/aitx/repo || true
 usermod -aG docker ubuntu
 
+# The OpenShell gateway (inside the workspace container) launches the sandbox
+# via the HOST docker daemon, bind-mounting /usr/local/bin/openshell-sandbox
+# from the HOST at the identical path. Sync the binaries out of the workspace
+# once they exist; guard runs every 2 minutes and is idempotent.
+cat > /opt/aitx/sync-openshell-bins.sh <<'EOS'
+#!/bin/bash
+W=$(docker ps --format '{{.Names}}' | grep workspace | head -1)
+[ -n "$W" ] || exit 0
+for b in openshell openshell-gateway openshell-sandbox; do
+  if [ ! -f "/usr/local/bin/$b" ]; then
+    rm -rf "/usr/local/bin/$b"
+    docker cp "$W:/usr/local/bin/$b" "/usr/local/bin/$b" 2>/dev/null && chmod 755 "/usr/local/bin/$b"
+  fi
+done
+EOS
+chmod 700 /opt/aitx/sync-openshell-bins.sh
+echo "*/2 * * * * root /opt/aitx/sync-openshell-bins.sh" > /etc/cron.d/aitx-bin-sync
+
 # Backup + self-stop script (July 20, 05:00 UTC == July 20, 00:00 CDT)
 cat > /opt/aitx/backup-and-stop.sh <<'EOS'
 #!/bin/bash
