@@ -9,6 +9,9 @@ exec > /var/log/aitx-bootstrap.log 2>&1
 apt-get update -q
 apt-get install -y -q docker.io docker-compose-v2 git curl jq
 
+# Gateway state dirs shared host<->workspace at identical paths (see compose)
+mkdir -p /root/.local/state/nemoclaw /root/.local/state/openshell
+
 # Clone the user's fork (more stable than upstream; public, no auth needed)
 install -d -o ubuntu -g ubuntu /opt/aitx
 sudo -u ubuntu git clone https://github.com/Tar-ive/AITX-SAT-2026.git /opt/aitx/repo || true

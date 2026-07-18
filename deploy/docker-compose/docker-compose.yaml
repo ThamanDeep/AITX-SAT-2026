@@ -40,6 +40,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${NEMOCLAW_BIN_PATH:-/tmp/nemoclaw-bin}:${NEMOCLAW_BIN_PATH:-/tmp/nemoclaw-bin}
+      # Gateway state (TLS certs, per-sandbox JWTs) is bind-mounted into
+      # sandboxes by the HOST daemon — must exist on host at identical paths.
+      - /root/.local/state/nemoclaw:/root/.local/state/nemoclaw
+      - /root/.local/state/openshell:/root/.local/state/openshell
       - ../../config:/deploy/config:ro
       - ../../identity:/deploy/identity:ro
       - ./scripts:/deploy/scripts:ro
