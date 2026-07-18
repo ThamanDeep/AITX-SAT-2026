@@ -13,6 +13,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BASE_DIR, "scripts", "nemotron_config.json")
 DATASET_PATH = os.path.join(BASE_DIR, "scripts", "golden_dataset.json")
 EVAL_OUTPUT_PATH = os.path.join(BASE_DIR, "dashboard", "evaluations.json")
+MEMORY_OUTPUT_PATH = os.path.join(BASE_DIR, "dashboard", "episodic_memory.json")
 MEMORY_BUFFER_PATH = os.path.join(BASE_DIR, "docs", "memory_buffer.txt")
 
 # Global State
@@ -205,10 +206,82 @@ class CoordinatorAPIHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
+    def _authorized(self):
+        """POSTs require a bearer token only when COORDINATOR_TOKEN is set."""
+        token = os.environ.get("COORDINATOR_TOKEN", "")
+        if not token:
+            return True
+        return self.headers.get("Authorization", "") == f"Bearer {token}"
+
+    def _json_body(self):
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0 or length > 5_000_000:
+            return None
+        try:
+            return json.loads(self.rfile.read(length))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None
+
+    def _reply(self, code, payload):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(payload).encode())
+
+    def do_POST(self):
+        parsed_path = urlparse(self.path)
+        if not self._authorized():
+            return self._reply(401, {"error": "missing or invalid bearer token"})
+        body = self._json_body()
+        if body is None:
+            return self._reply(400, {"error": "invalid or missing JSON body"})
+
+        if parsed_path.path == "/api/evaluations":
+            # Append rows from the EC2 nightly RSI cycle (list or single object)
+            rows = body if isinstance(body, list) else [body]
+            existing = []
+            if os.path.exists(EVAL_OUTPUT_PATH):
+                try:
+                    existing = json.load(open(EVAL_OUTPUT_PATH))
+                except json.JSONDecodeError:
+                    existing = []
+            existing.extend(rows)
+            os.makedirs(os.path.dirname(EVAL_OUTPUT_PATH), exist_ok=True)
+            with open(EVAL_OUTPUT_PATH, "w") as f:
+                json.dump(existing, f, indent=2)
+            return self._reply(200, {"stored": len(rows), "total": len(existing)})
+
+        if parsed_path.path == "/api/episodic-memory":
+            rows = body if isinstance(body, list) else [body]
+            existing = []
+            if os.path.exists(MEMORY_OUTPUT_PATH):
+                try:
+                    existing = json.load(open(MEMORY_OUTPUT_PATH))
+                except json.JSONDecodeError:
+                    existing = []
+            existing.extend(rows)
+            os.makedirs(os.path.dirname(MEMORY_OUTPUT_PATH), exist_ok=True)
+            with open(MEMORY_OUTPUT_PATH, "w") as f:
+                json.dump(existing, f, indent=2)
+            return self._reply(200, {"stored": len(rows), "total": len(existing)})
+
+        return self._reply(404, {"error": "unknown endpoint"})
+
     def do_GET(self):
         global coordinator_status, current_logs, latest_mutation, latest_score
         parsed_path = urlparse(self.path)
-        
+
+        if parsed_path.path == "/api/episodic-memory":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            if os.path.exists(MEMORY_OUTPUT_PATH):
+                with open(MEMORY_OUTPUT_PATH, "r") as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self.wfile.write(json.dumps([]).encode())
+            return
+
         if parsed_path.path == "/api/status":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -258,8 +331,12 @@ class CoordinatorAPIHandler(BaseHTTPRequestHandler):
 
 # Start local server
 def run_server():
-    server = HTTPServer(("localhost", 8080), CoordinatorAPIHandler)
-    print("[Server] Nemotron Training Coordinator API listening on http://localhost:8080")
+    # Railway injects PORT and requires binding 0.0.0.0; localhost stays the
+    # default for laptop runs.
+    port = int(os.environ.get("PORT", 8080))
+    host = "0.0.0.0" if os.environ.get("PORT") else "localhost"
+    server = HTTPServer((host, port), CoordinatorAPIHandler)
+    print(f"[Server] Nemotron Training Coordinator API listening on http://{host}:{port}")
     server.serve_forever()
 
 if __name__ == "__main__":

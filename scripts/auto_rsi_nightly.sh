@@ -46,11 +46,27 @@ python3 scripts/verifiers_to_rsi_csv.py "$RESULTS" \
   --current false
 python3 scripts/post_rsi_discord.py
 
-# Optional: notify the coordinator API (friend's Railway service) so both RSI
-# tracks log in one place. Read-only trigger; failures never break the cycle.
+# Optional: log this cycle to the coordinator API so both RSI tracks share
+# one pane of glass. Failures never break the cycle. COORDINATOR_TOKEN adds
+# the bearer header once the Railway service sets one.
 if [ -n "${COORDINATOR_URL:-}" ]; then
-  curl -s -m 15 "${COORDINATOR_URL%/}/api/run-research" >/dev/null \
-    && echo "coordinator notified: run-research triggered" \
-    || echo "coordinator unreachable (non-fatal)"
+  AUTH=(); [ -n "${COORDINATOR_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer $COORDINATOR_TOKEN")
+  python3 - "$RESULTS" "$VERSION" <<'PYEOF' > /tmp/rsi-eval-post.json
+import json,sys
+rows=[json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+valid=[r for r in rows if not r.get("error")]
+rw=[float(r.get("reward",0)) for r in valid] or [0]
+print(json.dumps({"version":sys.argv[2],"source":"ec2-episodic-memory-track",
+  "decision_quality":round(sum(rw)/len(rw),4),"n_valid":len(valid),"n_total":len(rows)}))
+PYEOF
+  curl -s -m 15 "${AUTH[@]}" -H "Content-Type: application/json" \
+    -d @/tmp/rsi-eval-post.json "${COORDINATOR_URL%/}/api/evaluations" >/dev/null \
+    && echo "coordinator: eval row uploaded" || echo "coordinator unreachable (non-fatal)"
+  EPISODES=/tmp/rsi-episodes-post.json
+  docker cp "$C:/sandbox/.openclaw/workspace/memory/episodes.jsonl" /tmp/episodes.jsonl 2>/dev/null && \
+    python3 -c "import json,sys; rows=[json.loads(l) for l in open('/tmp/episodes.jsonl') if l.strip()]; json.dump(rows[-20:], open('$EPISODES','w'))" && \
+    curl -s -m 15 "${AUTH[@]}" -H "Content-Type: application/json" \
+      -d @"$EPISODES" "${COORDINATOR_URL%/}/api/episodic-memory" >/dev/null \
+    && echo "coordinator: recent episodes uploaded" || echo "coordinator episodes upload skipped"
 fi
 echo "candidate recorded; champion unchanged pending a human Discord decision"
