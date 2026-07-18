@@ -6,7 +6,7 @@ set -euo pipefail
 echo "[startup] installing prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq curl git ca-certificates docker.io >/dev/null
+apt-get install -y -qq curl git ca-certificates docker.io binutils jq >/dev/null
 
 export PATH="$HOME/.local/bin:$PATH"
 

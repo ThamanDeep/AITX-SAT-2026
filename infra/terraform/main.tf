@@ -60,9 +60,22 @@ resource "aws_security_group" "agent_host" {
   }
 }
 
+# The account's VPC has a restrictive subnet NACL (allows only 6379 +
+# ephemeral). Add SSH to it; rule is Terraform-managed and removed on destroy.
+resource "aws_network_acl_rule" "ssh_in" {
+  network_acl_id = "acl-0e5ab1f5cc5480f8c"
+  rule_number    = 90
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 22
+  to_port        = 22
+}
+
 resource "aws_instance" "agent_host" {
   ami                                  = nonsensitive(data.aws_ssm_parameter.ubuntu_ami.value)
-  instance_type                        = "t3.large" # 2 vCPU / 8 GB — fits the sandbox comfortably
+  instance_type                        = "t3.xlarge" # 4 vCPU / 16 GB — NVIDIA's recommended minimum is 4 vCPU
   key_name                             = aws_key_pair.agent_host.key_name
   vpc_security_group_ids               = [aws_security_group.agent_host.id]
   instance_initiated_shutdown_behavior = "stop" # self-shutdown => stopped (EBS + agent backup preserved)
@@ -107,5 +120,5 @@ output "ssh_command" {
 }
 
 output "estimated_cost" {
-  value = "t3.large ~$0.083/h + 40GB gp3 ~$3.2/mo => ~$4.30 for the 2-day run; ~$3/mo for the stopped EBS after July 20"
+  value = "t3.xlarge ~$0.166/h + 40GB gp3 ~$3.2/mo => ~$8.20 for the 2-day run; ~$3/mo for the stopped EBS after July 20"
 }
