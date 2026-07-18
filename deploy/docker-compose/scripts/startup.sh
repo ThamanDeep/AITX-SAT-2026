@@ -28,11 +28,30 @@ for b in openshell openshell-gateway openshell-sandbox; do
 done
 ls -la "$NEMOCLAW_BIN_PATH"
 
-echo "[startup] onboarding sandbox '$NEMOCLAW_SANDBOX_NAME' with agent team"
-nemoclaw onboard --agents /deploy/config/agents.yaml || {
-  echo "[startup] onboard failed; retrying with --fresh"
-  nemoclaw onboard --fresh --agents /deploy/config/agents.yaml
+# Official knobs (per retail-assistant example): tell NemoClaw where the
+# host-visible binaries live so gateway + sandbox mounts resolve on the host.
+export NEMOCLAW_OPENSHELL_GATEWAY_BIN="$NEMOCLAW_BIN_PATH/openshell-gateway"
+export NEMOCLAW_OPENSHELL_SANDBOX_BIN="$NEMOCLAW_BIN_PATH/openshell-sandbox"
+
+sandbox_running() {
+  docker ps --format '{{.Names}}' | grep -q "openshell-${NEMOCLAW_SANDBOX_NAME}"
 }
+
+echo "[startup] onboarding sandbox '$NEMOCLAW_SANDBOX_NAME' with agent team (attempt 1)"
+timeout 20m nemoclaw onboard --agents /deploy/config/agents.yaml || true
+
+if ! sandbox_running; then
+  echo "[startup] attempt 1 incomplete — killing stale gateway and retrying (example's Fix #9 flow)"
+  pkill -f openshell-gateway 2>/dev/null || true
+  docker rm -f "openshell-${NEMOCLAW_SANDBOX_NAME}" 2>/dev/null || true
+  sleep 3
+  timeout 20m nemoclaw onboard --resume || timeout 20m nemoclaw onboard --fresh --agents /deploy/config/agents.yaml || true
+fi
+
+if ! sandbox_running; then
+  echo "[startup] onboarding still incomplete; keeping container alive for inspection"
+  sleep infinity
+fi
 
 echo "[startup] injecting identity layer"
 C=$(docker ps --format '{{.Names}}' | grep "openshell-${NEMOCLAW_SANDBOX_NAME}" | head -1)
