@@ -13,8 +13,11 @@ from urllib.parse import parse_qs, urlparse
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from prepare_rsi_story import build_story
+
 ROOT = Path(__file__).resolve().parents[1]
 PORT = int(os.getenv("DASHBOARD_API_PORT", "8787"))
+RSI_RUNS_CSV = Path(os.getenv("RSI_RUNS_CSV", ROOT / "data/rsi_runs.csv"))
 CATEGORIES = {
     "macbook": re.compile(r"\bmacbook\b", re.I),
     "gpu": re.compile(r"\b(gpu|graphics card|geforce|rtx|gtx|radeon)\b", re.I),
@@ -159,13 +162,24 @@ class Handler(SimpleHTTPRequestHandler):
             return
 
         if parsed.path == "/api/improvement":
-            self.send_json({
-                "evidence_status": "illustrative",
-                "source": "User-provided recursive-improvement design reference",
-                "note": "Replace these rows with measured Verifiers outputs after the first overnight run.",
-                "runs": IMPROVEMENT_RUNS,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-            })
+            if not RSI_RUNS_CSV.exists():
+                self.send_json({
+                    "evidence_status": "illustrative",
+                    "source": "built-in fallback",
+                    "note": f"CSV unavailable: {RSI_RUNS_CSV}",
+                    "runs": IMPROVEMENT_RUNS,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                })
+                return
+            try:
+                self.send_json(build_story(RSI_RUNS_CSV))
+            except Exception as error:
+                self.send_json({
+                    "evidence_status": "invalid",
+                    "source": str(RSI_RUNS_CSV),
+                    "error": str(error),
+                    "runs": [],
+                }, 422)
             return
 
         super().do_GET()
