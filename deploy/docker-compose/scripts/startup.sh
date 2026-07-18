@@ -22,7 +22,10 @@ fi
 # so copy them into the shared path or the sandbox container cannot start
 # ("openshell-sandbox: is a directory").
 mkdir -p "$NEMOCLAW_BIN_PATH"
-cp -f /usr/local/bin/openshell* "$NEMOCLAW_BIN_PATH/" 2>/dev/null || true
+for b in openshell openshell-gateway openshell-sandbox; do
+  rm -rf "${NEMOCLAW_BIN_PATH:?}/$b"   # purge dirs Docker may have auto-created
+  cp -f "/usr/local/bin/$b" "$NEMOCLAW_BIN_PATH/$b" 2>/dev/null || true
+done
 ls -la "$NEMOCLAW_BIN_PATH"
 
 echo "[startup] onboarding sandbox '$NEMOCLAW_SANDBOX_NAME' with agent team"
