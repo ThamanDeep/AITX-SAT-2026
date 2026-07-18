@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="style.css?v=2">
-  <link rel="stylesheet" href="layout-fixes.css?v=5">
+  <link rel="stylesheet" href="layout-fixes.css?v=8">
 </head>
 <body>
   <aside class="rail" aria-label="Primary navigation">
@@ -23,7 +23,6 @@
     <nav class="primary-nav">
       <button class="nav-link active" data-page="dashboard"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></button>
       <button class="nav-link" data-page="deals"><i class="fa-solid fa-tags"></i><span>Deals</span><b>18</b></button>
-      <button class="nav-link" data-page="forecasts"><i class="fa-solid fa-chart-line"></i><span>Forecasts</span></button>
       <button class="nav-link" data-page="leaderboard"><i class="fa-solid fa-ranking-star"></i><span>Leaderboard</span></button>
       <button class="nav-link" data-page="methodology"><i class="fa-solid fa-diagram-project"></i><span>Methodology</span></button>
     </nav>
@@ -131,29 +130,41 @@
       <div class="deal-grid" id="deal-grid"></div>
     </section>
 
-    <section class="page" id="forecasts-page">
-      <div class="page-head compact">
-        <div><p class="eyebrow">Forecast desk</p><h1>Signals, not promises.</h1><p>Price direction with uncertainty, deadlines, and known market catalysts.</p></div>
-      </div>
-      <div class="forecast-grid">
-        <article class="forecast-hero">
-          <p class="eyebrow">30-day model outlook</p><h2>RTX 5090 prices may soften before August.</h2>
-          <p>Current listing spread is wide and verified supply is improving. The recommendation stays WAIT while the probability of landing below $3,600 remains above the configured threshold.</p>
-          <dl><div><dt>Forecast</dt><dd>−7.8%</dd></div><div><dt>80% interval</dt><dd>−14% to +3%</dd></div><div><dt>Next review</dt><dd>24 hours</dd></div></dl>
-        </article>
-        <aside class="forecast-aside"><h3>Promotion gate</h3><ol><li>Rolling-origin backtest</li><li>No future data leakage</li><li>Calibrated intervals</li><li>Champion beats baseline</li></ol><button class="secondary-button" data-page="methodology">See evaluation method</button></aside>
-      </div>
-    </section>
-
     <section class="page" id="leaderboard-page">
       <div class="page-head compact leaderboard-head">
         <div><p class="eyebrow">Commerce agent benchmark</p><h1>Leaderboard</h1><p>Compare decision quality, retrieval, speed, and trust on the same held-out cases.</p></div>
         <span class="edition" id="improvement-evidence">Loading evaluation history…</span>
       </div>
 
+      <div class="improvement-visuals improvement-first">
+        <article class="panel improvement-chart-panel">
+          <div class="panel-head"><div><p class="eyebrow">Recursive improvement</p><h2>Champion vs. each challenger</h2></div><span class="data-badge">Measured runs</span></div>
+          <div class="improvement-chart-wrap"><canvas id="improvement-chart" aria-label="Recursive self-improvement chart"></canvas></div>
+        </article>
+        <article class="improvement-summary" id="improvement-summary"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading policy deltas…</p></article>
+      </div>
+
+      <section class="morning-rsi" aria-labelledby="morning-rsi-title">
+        <div class="morning-rsi-head">
+          <div><p class="eyebrow">Daily operating rhythm</p><h2 id="morning-rsi-title">One evidence-backed RSI cycle after the 8 AM digest.</h2></div>
+          <span class="edition human-only"><i class="fa-solid fa-user-check"></i> Human promotion only</span>
+        </div>
+        <ol class="morning-rhythm" id="morning-rhythm">
+          <li><time>8:00</time><span>Read digest</span></li>
+          <li><time>8:05</time><span>Pull lessons</span></li>
+          <li><time>8:15</time><span>Run one RSI cycle</span></li>
+          <li><time>8:45</time><span>Review trend</span></li>
+          <li><time>Human</time><span>Promote or reject</span></li>
+        </ol>
+        <div class="fresh-run-strip" id="fresh-run-strip">
+          <span><small>Latest measured run</small><strong>Loading…</strong></span>
+        </div>
+        <footer><span id="lessons-status"><i class="fa-solid fa-cloud-arrow-down"></i> Checking lessons sync…</span><code>--accepted true</code><small>The agent records evidence. A person changes the champion.</small></footer>
+      </section>
+
       <div class="benchmark-bar">
         <label>Benchmark
-          <select id="benchmark-select"><option>PC Purchase Decisions</option><option>Price Retrieval</option><option>Forecast Calibration</option></select>
+          <select id="benchmark-select"><option>PC Purchase Decisions</option><option>Price Retrieval</option></select>
         </label>
         <label>Dataset
           <select><option>Golden set · held-out</option><option>Golden set · development</option></select>
@@ -174,97 +185,55 @@
         </div>
         <footer class="comparison-legend"><span><i class="better"></i> Better than baseline</span><span><i class="worse"></i> Worse than baseline</span><span>— No meaningful change</span></footer>
       </article>
-
-      <div class="improvement-visuals">
-        <article class="panel improvement-chart-panel">
-          <div class="panel-head"><div><p class="eyebrow">Recursive improvement</p><h2>Policy quality rises as regret falls</h2></div><span class="data-badge">Prototype benchmark</span></div>
-          <div class="improvement-chart-wrap"><canvas id="improvement-chart" aria-label="Recursive self-improvement chart"></canvas></div>
-        </article>
-        <article class="improvement-summary" id="improvement-summary"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading policy deltas…</p></article>
-      </div>
-
-      <div class="arena-method">
-        <div><span>01</span><h3>Same cases</h3><p>Every policy sees the same frozen purchase scenarios.</p></div>
-        <i class="fa-solid fa-arrow-right"></i>
-        <div><span>02</span><h3>Independent rubrics</h3><p>Verifiers score claims, links, latency, and decisions.</p></div>
-        <i class="fa-solid fa-arrow-right"></i>
-        <div><span>03</span><h3>Promotion gate</h3><p>A challenger ships only when it improves without regression.</p></div>
-      </div>
     </section>
 
     <section class="page methodology" id="methodology-page">
-      <div class="method-hero">
-        <p class="eyebrow">How the system learns</p>
-        <h1>Seven quiet hours.<br><em>One safer policy by morning.</em></h1>
-        <p>Every night, commerce agents test new ways to retrieve evidence and make buy-or-wait decisions. Nemotron teaches from failures; Verifiers decides what actually improved.</p>
-        <div class="method-facts"><span><b>15</b> golden cases today</span><span><b>7h</b> nightly window</span><span><b>1</b> promoted champion</span></div>
-      </div>
-
-      <article class="overnight">
-        <div class="section-title"><p class="eyebrow">The nightly evolution loop</p><h2>12:00 AM → 7:00 AM</h2><p>Production target · current repository behavior remains a simulation until this pipeline is fully wired.</p></div>
-        <ol class="night-timeline">
-          <li><time>12:00</time><i class="fa-solid fa-lock"></i><div><h3>Freeze the world</h3><p>Snapshot listings, policy version, golden dataset, and retrieval index so every candidate receives the same evidence.</p></div></li>
-          <li><time>1:00</time><i class="fa-solid fa-globe"></i><div><h3>Agents explore</h3><p>Scout, Inspector, Speculator, and marketplace agents browse allowed sources, retrieve URLs, and run purchase cases.</p></div></li>
-          <li><time>3:00</time><i class="fa-solid fa-scale-balanced"></i><div><h3>Verifiers score</h3><p>Rubrics grade decision accuracy, landed price, source validity, retrieval recall, latency, hallucination, and deadline regret.</p></div></li>
-          <li><time>4:30</time><i class="fa-solid fa-chalkboard-user"></i><div><h3>Nemotron teaches</h3><p>The main teacher reviews failure traces and proposes one focused change to the prompt, tool routing, memory, or retrieval policy.</p></div></li>
-          <li><time>5:30</time><i class="fa-solid fa-vial-circle-check"></i><div><h3>Challenge the candidate</h3><p>Held-out cases, hard-case mining, memory-on/off ablations, and rolling-origin price backtests check whether the gain is real.</p></div></li>
-          <li><time>6:30</time><i class="fa-solid fa-trophy"></i><div><h3>Promote or roll back</h3><p>The challenger becomes champion only if confidence, safety, URL validity, and regression gates all pass.</p></div></li>
-          <li><time>7:00</time><i class="fa-solid fa-sun"></i><div><h3>Publish the morning policy</h3><p>Version the winning policy, attach an evaluation report, update the leaderboard, and keep the prior champion ready for rollback.</p></div></li>
-        </ol>
-      </article>
-
-      <article class="policy-map">
-        <div class="section-title"><p class="eyebrow">What is being improved</p><h2>The policy is more than a prompt.</h2></div>
-        <div class="policy-flow">
-          <div class="flow-node input"><span>Input</span><i class="fa-regular fa-message"></i><h3>Purchase goal</h3><p>Product, budget, condition, location, and deadline</p></div>
-          <i class="fa-solid fa-arrow-right flow-arrow"></i>
-          <div class="flow-node policy"><span>Policy π</span><i class="fa-solid fa-route"></i><h3>Next best action</h3><p>Prompt + memory + retrieval query + tool routing + buy/wait rule</p></div>
-          <i class="fa-solid fa-arrow-right flow-arrow"></i>
-          <div class="flow-node output"><span>Output</span><i class="fa-solid fa-receipt"></i><h3>Evidence-backed call</h3><p>Recommendation, verified URLs, forecast, and uncertainty</p></div>
+      <article class="morning-cycle">
+        <div class="section-title"><p class="eyebrow">The morning human loop</p><h2>Digest → lessons → one measured cycle.</h2><p>At 8:00 AM, the team turns overnight evidence into one controlled experiment. Automation prepares the candidate; a person owns promotion.</p></div>
+        <div class="morning-videos" aria-label="Actual morning RSI workflow">
+          <article class="method-video-card">
+            <header><span>01 · 8:00</span><h3>Read the digest</h3></header>
+            <button class="method-video" type="button" aria-label="Pause or play Discord evidence intake" aria-pressed="false">
+              <video autoplay muted loop playsinline preload="metadata" poster="media/rsi-01-discord-digest.jpg?v=3">
+                <source src="media/rsi-01-discord-digest.mp4?v=3" type="video/mp4">
+              </video>
+              <span class="method-video-play"><i class="fa-solid fa-play"></i></span>
+            </button>
+            <p>Live Discord intake → evidence digest with measured cloud results.</p>
+          </article>
+          <article class="method-video-card">
+            <header><span>02 · 8:05</span><h3>Pull lessons</h3></header>
+            <button class="method-video" type="button" aria-label="Pause or play cloud lesson sync" aria-pressed="false">
+              <video autoplay muted loop playsinline preload="metadata" poster="media/rsi-02-pull-lessons.jpg?v=2">
+                <source src="media/rsi-02-pull-lessons.mp4?v=2" type="video/mp4">
+              </video>
+              <span class="method-video-play"><i class="fa-solid fa-play"></i></span>
+            </button>
+            <p>Open the shell, sync <code>lessons.md</code>, and freeze the cycle input.</p>
+          </article>
+          <article class="method-video-card">
+            <header><span>03 · 8:15</span><h3>Run one cycle</h3></header>
+            <button class="method-video" type="button" aria-label="Pause or play Verifiers evaluation" aria-pressed="false">
+              <video autoplay muted loop playsinline preload="metadata" poster="media/rsi-03-verifiers-cycle.jpg?v=2">
+                <source src="media/rsi-03-verifiers-cycle.mp4?v=2" type="video/mp4">
+              </video>
+              <span class="method-video-play"><i class="fa-solid fa-play"></i></span>
+            </button>
+            <p>Run one focused policy change against the same Verifiers cases.</p>
+          </article>
+          <article class="method-video-card">
+            <header><span>04 · Human</span><h3>Choose promotion</h3></header>
+            <button class="method-video" type="button" aria-label="Pause or play human Discord approval" aria-pressed="false">
+              <video autoplay muted loop playsinline preload="metadata" poster="media/rsi-04-discord-approval.jpg?v=3">
+                <source src="media/rsi-04-discord-approval.mp4?v=3" type="video/mp4">
+              </video>
+              <span class="method-video-play"><i class="fa-solid fa-play"></i></span>
+            </button>
+            <p>Request a human decision in Discord; the champion stays unchanged.</p>
+          </article>
         </div>
-        <p class="definition"><strong>Optimization target:</strong> improve the agent harness and retrieval accuracy together—make difficult cases useful, answers fast, URLs real, claims supported, and decisions less costly.</p>
+        <p class="method-demo-note"><i class="fa-solid fa-circle-check"></i> Actual workflow captures from Discord, the cloud sandbox, and the Verifiers evaluation run.</p>
       </article>
-
-      <article class="verifier-section">
-        <div class="section-title"><p class="eyebrow">The evaluation contract</p><h2>Reward evidence, not eloquence.</h2><p>Prime Intellect Verifiers packages each task with a dataset, environment, tools, and rubric. Multiple rewards become one promotion decision.</p></div>
-        <div class="score-grid">
-          <div><span>30%</span><i class="fa-solid fa-check-double"></i><h3>Decision quality</h3><p>Correct buy, wait, or abstain call against the golden answer.</p></div>
-          <div><span>20%</span><i class="fa-solid fa-link"></i><h3>Retrieval accuracy</h3><p>Relevant products, correct variants, valid pages, and enough coverage.</p></div>
-          <div><span>15%</span><i class="fa-solid fa-tag"></i><h3>Landed-price error</h3><p>Price, shipping, condition, and seller costs match checkout reality.</p></div>
-          <div><span>15%</span><i class="fa-solid fa-shield"></i><h3>Groundedness</h3><p>Claims trace to retrieved evidence; unsupported claims fail.</p></div>
-          <div><span>10%</span><i class="fa-solid fa-gauge-high"></i><h3>Latency</h3><p>Useful answer within the response budget.</p></div>
-          <div><span>10%</span><i class="fa-solid fa-hourglass-half"></i><h3>Decision regret</h3><p>Penalize waiting too long or buying before a better window.</p></div>
-        </div>
-      </article>
-
-      <article class="dataset-section">
-        <div class="section-title"><p class="eyebrow">Data discipline</p><h2>Golden cases teach. Held-out cases judge.</h2></div>
-        <div class="dataset-visual">
-          <div><i class="fa-solid fa-database"></i><strong>Golden dataset</strong><span>GPU · MacBook · RAM</span><small>Human-reviewed purchase cases</small></div>
-          <i class="fa-solid fa-code-branch"></i>
-          <div class="split-stack">
-            <p><b>Train / dev</b><span>Reflection + policy mutations</span></p>
-            <p><b>Validation</b><span>Early stopping + model selection</span></p>
-            <p><b>Held-out test</b><span>Promotion only; never teacher feedback</span></p>
-          </div>
-          <i class="fa-solid fa-arrow-right"></i>
-          <div><i class="fa-solid fa-medal"></i><strong>Champion gate</strong><span>Improve with confidence</span><small>No safety or URL regressions</small></div>
-        </div>
-      </article>
-
-      <article class="truth-box">
-        <i class="fa-solid fa-circle-info"></i>
-        <div><h2>What is real today?</h2><p>The repository contains a 15-case golden dataset, scoring scripts, a coordinator, and simulated improvement iterations. It does <strong>not yet prove</strong> autonomous overnight learning. This methodology is the implementation contract: connect live Verifiers rollouts, freeze held-out tests, then publish only measured runs.</p></div>
-      </article>
-
-      <footer class="source-list">
-        <p>Method references</p>
-        <a href="https://docs.primeintellect.ai/verifiers/environments" target="_blank" rel="noreferrer">Prime Intellect Verifiers <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="https://docs.primeintellect.ai/verifiers/training" target="_blank" rel="noreferrer">Training &amp; GEPA <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="https://arena.ai/blog/agent-arena-methodology/" target="_blank" rel="noreferrer">Arena methodology <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noreferrer">Reflexion <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="https://otexts.com/fpp3/tscv.html" target="_blank" rel="noreferrer">Time-series validation <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-      </footer>
     </section>
 
     <section class="page simple-page" id="settings-page">
@@ -275,6 +244,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

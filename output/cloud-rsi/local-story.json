@@ -1,0 +1,52 @@
+{
+  "evidence_status": "measured",
+  "source": "data/rsi_runs.csv",
+  "note": "Measured from Verifiers rollout outputs.",
+  "runs": [
+    {
+      "step": 0,
+      "run_id": "baseline-nomem-20260718",
+      "version": "v1.0",
+      "label": "Measured baseline (memory OFF, 45 Nemotron rollouts)",
+      "current": true,
+      "baseline": true,
+      "decision_quality": 0.551111,
+      "decision_ci": 0.050076,
+      "landed_price_error": null,
+      "landed_ci": null,
+      "latency": 35.495363,
+      "latency_ci": 4.645941,
+      "valid_url_rate": null,
+      "url_ci": null,
+      "unsupported_claims": null,
+      "claims_ci": null,
+      "forecast_regret": null,
+      "regret_ci": null,
+      "sample_size": 45,
+      "teacher_model": "Nemotron"
+    }
+  ],
+  "candidates": [
+    {
+      "step": 0,
+      "run_id": "baseline-nomem-20260718",
+      "version": "v1.0",
+      "parent_version": "",
+      "accepted": true,
+      "decision_quality": 0.551111,
+      "policy_change": "Measured baseline (memory OFF, 45 Nemotron rollouts)",
+      "evaluated_at": "2026-07-18T20:41:07.756052+00:00"
+    },
+    {
+      "step": 1,
+      "run_id": "cloud-memory-20260718",
+      "version": "auto-20260718",
+      "parent_version": "v1.0",
+      "accepted": false,
+      "decision_quality": 0.166667,
+      "policy_change": "Cloud cron: memory snapshot was empty; 34 of 45 provider calls failed",
+      "evaluated_at": "2026-07-18T21:21:11+00:00"
+    }
+  ],
+  "generated_at": "2026-07-18T21:51:41.129649+00:00"
+}

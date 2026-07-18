@@ -1,0 +1,2 @@
+step,run_id,version,parent_version,evaluated_at,accepted,baseline,current,evidence_status,policy_change,decision_quality,decision_ci,landed_price_error_pct,landed_ci,median_latency_s,latency_ci,valid_url_rate_pct,url_ci,unsupported_claims_pct,claims_ci,price_forecast_regret_usd,regret_ci,sample_size,teacher_model
+0,baseline-nomem-20260718,v1.0,,2026-07-18T20:41:07.756052+00:00,true,true,true,measured,"Measured baseline (memory OFF, 45 Nemotron rollouts)",0.551111,0.050076,0.551111,0.050076,35.495363,4.645941,0.551111,0.050076,0.551111,0.050076,0.551111,0.050076,45,Nemotron

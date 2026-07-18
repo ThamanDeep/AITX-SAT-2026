@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live RSI shell capture</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#0b0d0c;color:#d9e2dc;font:16px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+    header{display:flex;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #28312c;background:#111511;color:#7f9487;font-size:12px}
+    header b{color:#61d18b}.terminal{padding:26px 30px;white-space:pre-wrap}.line{min-height:1.55em;opacity:0;animation:show .15s forwards}
+    .prompt{color:#61d18b}.command{color:#fff}.muted{color:#77827b}.warn{color:#f3c858}.bad{color:#ff7f73}.good{color:#61d18b}
+    footer{position:fixed;inset:auto 0 0;display:flex;justify-content:space-between;padding:12px 20px;border-top:1px solid #28312c;background:#111511;color:#7f9487;font-size:11px}
+    @keyframes show{to{opacity:1}}
+  </style>
+</head>
+<body>
+  <header><span><b>LIVE CAPTURE</b> · ubuntu@aitx-agent-host</span><span>2026-07-18 · UTC</span></header>
+  <main class="terminal" id="terminal"></main>
+  <footer><span>Decision Frontier RSI</span><span id="source"></span></footer>
+  <script>
+    const scenes={
+      lessons:{
+        source:"EC2 → local lesson snapshot",
+        lines:[
+          ["prompt","$ ","scp -i infra/terraform/aitx-agent-host.pem ubuntu@54.162.99.109:/opt/aitx/memory/lessons-auto-20260718.md output/cloud-rsi/lessons-live.md",""],
+          ["muted","","",""],
+          ["prompt","$ ","stat -f '%z bytes · %Sm' output/cloud-rsi/lessons-live.md",""],
+          ["good","","","1 bytes · Jul 18 16:42:03 2026"],
+          ["prompt","$ ","wc -l output/cloud-rsi/lessons-live.md",""],
+          ["warn","","","1 output/cloud-rsi/lessons-live.md"],
+          ["muted","","","Cloud sync succeeded. The lesson snapshot is empty; the cycle must not claim learned lessons."]
+        ]
+      },
+      cycle:{
+        source:"Live cron + Verifiers metadata",
+        lines:[
+          ["prompt","$ ","ssh aitx-agent-host 'sudo cat /etc/cron.d/aitx-rsi-nightly'",""],
+          ["good","","","30 5 * * * root /opt/aitx/repo/scripts/auto_rsi_nightly.sh"],
+          ["prompt","$ ","jq '{model,avg_reward,rollout_count,eval_seconds,error_rate_pct}' data/latest_rsi_eval.json",""],
+          ["muted","","","{"],
+          ["muted","","","  \"model\": \"nvidia/nemotron-3-super-120b-a12b\","],
+          ["warn","","","  \"avg_reward\": 0.16666666666666666,"],
+          ["good","","","  \"rollout_count\": 45,"],
+          ["muted","","","  \"eval_seconds\": 356.0899851322174,"],
+          ["bad","","","  \"error_rate_pct\": 75.55555555555556"],
+          ["muted","","","}"],
+          ["prompt","$ ","grep -n 'human\\|accepted false\\|post_rsi' scripts/auto_rsi_nightly.sh",""],
+          ["good","","","7:# request a human promote/keep decision in Discord"],
+          ["good","","","45:  --accepted false"],
+          ["good","","","47:python3 scripts/post_rsi_discord.py"],
+          ["muted","","","Champion v1.0 remains unchanged pending a human decision."]
+        ]
+      }
+    };
+    const scene=scenes[new URLSearchParams(location.search).get("scene")]||scenes.lessons;
+    document.querySelector("#source").textContent=scene.source;
+    document.querySelector("#terminal").innerHTML=scene.lines.map(([cls,prefix,cmd,text],i)=>
+      `<div class="line ${cls}" style="animation-delay:${.45+i*.72}s">${prefix?`<span class="prompt">${prefix}</span>`:""}${cmd?`<span class="command">${cmd}</span>`:text}</div>`
+    ).join("");
+  </script>
+</body>
+</html>

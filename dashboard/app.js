@@ -5,7 +5,7 @@ const catalog={
   macbook:{label:"MacBook",target:699,icon:"fa-laptop"},
   ram:{label:"DDR5 RAM",target:199,icon:"fa-memory"}
 };
-const state={category:"gpu",market:null,deals:[],dealFilter:"all",improvement:[],limit:3};
+const state={category:"gpu",market:null,deals:[],dealFilter:"all",improvement:[],operations:null,limit:3};
 let marketChart,improvementChart,toastTimer;
 
 const money=(n,currency="USD")=>new Intl.NumberFormat("en-US",{style:"currency",currency,maximumFractionDigits:n<1000?2:0}).format(n);
@@ -25,6 +25,9 @@ async function api(path){
 function showPage(id){
   const page=$(`#${id}-page`);
   if(!page)return;
+  const focusView=["leaderboard","methodology"].includes(id);
+  document.body.classList.toggle("focus-view",focusView);
+  $$(".method-video video").forEach(video=>id==="methodology"?video.play().catch(()=>{}):video.pause());
   $$(".page").forEach(el=>el.classList.toggle("active",el===page));
   $$(".nav-link[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===id));
   $(".rail").classList.remove("open");
@@ -130,8 +133,11 @@ async function loadDeals(){
   }
 }
 
-const metricCell=(value,ci,format,trend)=>`<td class="${trend}"><b>${format(value)}</b><small>±${format(ci)}</small></td>`;
+const metricCell=(value,ci,format,trend)=>value==null
+  ?'<td class="unavailable"><b>—</b><small>not measured</small></td>'
+  :`<td class="${trend}"><b>${format(value)}</b><small>${ci==null?"":`±${format(ci)}`}</small></td>`;
 function trendClass(value,baseline,higherIsBetter){
+  if(value==null||baseline==null)return"same";
   const delta=value-baseline;
   if(Math.abs(delta)<.0001)return"same";
   return(higherIsBetter?delta>0:delta<0)?"better":"worse";
@@ -140,7 +146,8 @@ function trendClass(value,baseline,higherIsBetter){
 function renderImprovement(payload){
   state.improvement=payload.runs;
   const runs=payload.runs, baseline=runs.find(run=>run.baseline)||runs.at(-1);
-  $("#improvement-evidence").textContent=payload.evidence_status==="illustrative"?"Prototype evaluation history":"Measured verifier history";
+  const candidates=[...payload.candidates].sort((a,b)=>a.step-b.step);
+  $("#improvement-evidence").textContent=payload.evidence_status==="illustrative"?"Prototype evaluation history":`${candidates.length} measured runs`;
   $("#benchmark-note").textContent=`95% confidence intervals · ${payload.evidence_status}`;
   $("#improvement-table").innerHTML=runs.map((run,index)=>{
     const movement=index===0?'<span class="movement up">↑ 1</span>':index===1?'<span class="movement down">↓ 1</span>':'<span class="movement">–</span>';
@@ -156,25 +163,35 @@ function renderImprovement(payload){
     </tr>`;
   }).join("");
 
-  const current=runs.find(run=>run.current)||runs[0], decisionGain=(current.decision_quality-baseline.decision_quality)/baseline.decision_quality*100;
-  $("#improvement-summary").innerHTML=`
-    <p class="eyebrow">Champion delta vs baseline</p>
-    <strong>+${decisionGain.toFixed(1)}%</strong><span>decision quality</span>
-    <dl><div><dt>Valid URLs</dt><dd>+${(current.valid_url_rate-baseline.valid_url_rate).toFixed(1)} pts</dd></div><div><dt>Unsupported claims</dt><dd>−${(baseline.unsupported_claims-current.unsupported_claims).toFixed(2)} pts</dd></div><div><dt>Forecast regret</dt><dd>−${money(baseline.forecast_regret-current.forecast_regret)}</dd></div></dl>
-    <small>${esc(payload.note)}</small>`;
-  renderImprovementChart(runs);
+  const current=runs.find(run=>run.current)||runs[0], latest=candidates.at(-1);
+  if(candidates.length===1){
+    $("#improvement-summary").innerHTML=`
+      <p class="eyebrow">Measured baseline established</p>
+      <strong>${current.decision_quality.toFixed(3)}</strong><span>decision quality · ±${current.decision_ci.toFixed(3)}</span>
+      <dl><div><dt>Rollouts</dt><dd>${current.sample_size}</dd></div><div><dt>Median latency</dt><dd>${current.latency.toFixed(2)}s</dd></div><div><dt>Teacher</dt><dd>${esc(current.teacher_model)}</dd></div></dl>
+      <small>Memory is off. Run the first lessons-informed challenger to begin the trend.</small>`;
+  }else{
+    const decisionGain=(latest.decision_quality-current.decision_quality)/current.decision_quality*100;
+    $("#improvement-summary").innerHTML=`
+      <p class="eyebrow">${latest.accepted?"Promoted":"Challenger held"}</p>
+      <strong>${decisionGain>=0?"+":""}${decisionGain.toFixed(1)}%</strong><span>decision quality</span>
+      <dl><div><dt>Candidate</dt><dd>${esc(latest.version)}</dd></div><div><dt>Champion</dt><dd>${esc(current.version)}</dd></div><div><dt>Decision</dt><dd>${latest.accepted?"Promoted":"No change"}</dd></div></dl>
+      <small>${esc(latest.policy_change)}</small>`;
+  }
+  renderImprovementChart(runs,payload.candidates);
 }
 
-function renderImprovementChart(runs){
-  const ordered=[...runs].reverse();
+function renderImprovementChart(runs,candidates=[]){
+  const ordered=[...candidates].sort((a,b)=>a.step-b.step);
+  let champion=null;
+  const championLine=ordered.map(candidate=>{if(candidate.accepted)champion=candidate.decision_quality;return champion});
   improvementChart?.destroy();
   improvementChart=new Chart($("#improvement-chart"),{type:"line",data:{labels:ordered.map(run=>run.version),datasets:[
-    {label:"Decision quality",data:ordered.map(run=>run.decision_quality),yAxisID:"quality",stepped:"after",borderColor:"#e84c6a",backgroundColor:"#e84c6a",pointRadius:5,borderWidth:3},
-    {label:"Forecast regret",data:ordered.map(run=>run.forecast_regret),yAxisID:"regret",borderColor:"#77736a",backgroundColor:"#77736a",borderDash:[4,4],pointRadius:3,borderWidth:1.5}
+    {label:"Champion",data:championLine,stepped:"after",borderColor:"#e84c6a",backgroundColor:"#e84c6a",pointRadius:4,borderWidth:3},
+    {label:"Evaluated candidate",data:ordered.map(run=>run.decision_quality),showLine:false,pointBackgroundColor:ordered.map(run=>run.accepted?"#28754c":"#aaa69b"),pointBorderColor:"#fffdf7",pointRadius:6}
   ]},options:{animation:false,responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:14,font:{family:"DM Sans",size:11}}}},scales:{
     x:{grid:{display:false},ticks:{font:{family:"DM Mono",size:10}}},
-    quality:{position:"left",min:.60,max:.80,title:{display:true,text:"Decision quality"},ticks:{font:{family:"DM Mono",size:9}},grid:{color:"#ded8cc"}},
-    regret:{position:"right",min:40,max:100,title:{display:true,text:"Regret (USD)"},ticks:{callback:value=>money(value),font:{family:"DM Mono",size:9}},grid:{display:false}}
+    y:{suggestedMin:.45,suggestedMax:.80,title:{display:true,text:"Decision quality"},ticks:{font:{family:"DM Mono",size:9}},grid:{color:"#ded8cc"}}
   }}});
 }
 
@@ -183,6 +200,28 @@ async function loadImprovement(){
   catch(error){
     $("#improvement-table").innerHTML=`<tr><td colspan="8">Evaluation API unavailable: ${esc(error.message)}</td></tr>`;
     $("#improvement-summary").innerHTML="<strong>No evaluation history</strong><p>Start the dashboard API and refresh.</p>";
+  }
+}
+
+function renderOperations(payload){
+  state.operations=payload;
+  const {lessons,latest_eval:latest}=payload;
+  $("#lessons-status").innerHTML=lessons.status==="synced"
+    ?`<i class="fa-solid fa-circle-check"></i> ${lessons.lesson_count} lessons synced · ${esc(relativeTime(lessons.updated_at))}`
+    :'<i class="fa-solid fa-cloud-arrow-down"></i> Lessons file awaiting cloud sandbox sync';
+  $("#fresh-run-strip").innerHTML=latest?`
+    <span><small>Latest measured run</small><strong>${esc(latest.model.split("/").at(-1))}</strong></span>
+    <span><small>Decision quality</small><strong>${latest.avg_reward.toFixed(3)}</strong></span>
+    <span><small>Valid JSON</small><strong>${latest.avg_metrics.valid_json_rate_pct.toFixed(1)}%</strong></span>
+    <span><small>Rollouts</small><strong>${latest.rollout_count}</strong></span>
+    <span><small>Evaluation time</small><strong>${latest.eval_seconds.toFixed(1)}s</strong></span>
+  `:'<span><small>Latest measured run</small><strong>Awaiting first evaluation</strong></span>';
+}
+
+async function loadOperations(){
+  try{renderOperations(await api("/api/rsi-operations"))}
+  catch(error){
+    $("#lessons-status").innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> RSI operations unavailable';
   }
 }
 
@@ -195,9 +234,19 @@ $("#watch-form").addEventListener("submit",event=>{event.preventDefault();render
 $$(".segmented button").forEach(el=>el.addEventListener("click",()=>{$$(".segmented button").forEach(button=>button.classList.toggle("active",button===el));state.limit=+el.dataset.range;renderMarketChart(state.market?.listings||[])}));
 $$(".filter-chip").forEach(el=>el.addEventListener("click",()=>{$$(".filter-chip").forEach(button=>button.classList.toggle("active",button===el));renderDeals(el.dataset.filter)}));
 $("#benchmark-select").addEventListener("change",event=>$("#benchmark-label").textContent=event.target.value);
-$("#run-evaluation").addEventListener("click",async event=>{event.currentTarget.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Refreshing';await loadImprovement();event.currentTarget.innerHTML='<i class="fa-solid fa-check"></i> History refreshed';showToast("Evaluation history refreshed. No policy was changed.")});
+$("#run-evaluation").addEventListener("click",async event=>{event.currentTarget.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Refreshing';await Promise.all([loadImprovement(),loadOperations()]);event.currentTarget.innerHTML='<i class="fa-solid fa-check"></i> History refreshed';showToast("Evidence refreshed. Promotion remains a human decision.")});
 $(".toggle").addEventListener("click",event=>event.currentTarget.classList.toggle("active"));
+$$(".method-video").forEach(button=>{
+  const video=$("video",button);
+  button.addEventListener("click",async()=>{
+    const play=video.paused;
+    $$(".method-video video").forEach(other=>{if(other!==video)other.pause()});
+    if(play)await video.play();else video.pause();
+  });
+  video.addEventListener("play",()=>{button.classList.add("playing");button.setAttribute("aria-pressed","true")});
+  video.addEventListener("pause",()=>{button.classList.remove("playing");button.setAttribute("aria-pressed","false")});
+});
 window.addEventListener("hashchange",()=>showPage(location.hash.slice(1)||"dashboard"));
 
-Promise.allSettled([loadMarket(),loadDeals(),loadImprovement()]);
+Promise.allSettled([loadMarket(),loadDeals(),loadImprovement(),loadOperations()]);
 showPage(location.hash.slice(1)||"dashboard");

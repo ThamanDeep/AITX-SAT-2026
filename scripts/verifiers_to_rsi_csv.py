@@ -25,7 +25,7 @@ def load_outputs(path):
     except json.JSONDecodeError:
         values = [json.loads(line) for line in text.splitlines() if line.strip()]
     values = values if isinstance(values, list) else values.get("outputs", [values])
-    rows = [row for row in values if row.get("is_completed", True) and not row.get("error")]
+    rows = [row for row in values if row.get("is_completed", True)]
     if not rows:
         raise ValueError("no completed rollout outputs found")
     return rows
@@ -73,14 +73,16 @@ def main():
     outputs = load_outputs(args.results)
     aggregates = {}
     for metric in METRICS:
+        fallback = "reward" if metric == "decision_quality" else None
         values = [
-            float(row.get("metrics", {}).get(metric, row.get("reward")))
+            row.get("metrics", {}).get(metric, row.get(fallback))
             for row in outputs
-            if row.get("metrics", {}).get(metric, row.get("reward")) is not None
         ]
-        if len(values) != len(outputs):
-            raise ValueError(f"metric missing from rollout outputs: {metric}")
-        aggregates[metric] = mean_ci(values)
+        if metric == "decision_quality":
+            values = [float(value or 0) for value in values]
+        else:
+            values = [float(value) for value in values if value is not None]
+        aggregates[metric] = mean_ci(values) if len(values) == len(outputs) else (None, None)
     def _latency_s(row):
         t = row.get("timing", {}) or {}
         if "total_ms" in t:

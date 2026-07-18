@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only dashboard API backed by the hosted Supabase project."""
 
+import csv
 import json
 import os
 import re
@@ -11,6 +12,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import psycopg2
+import requests
 from psycopg2.extras import RealDictCursor
 
 from prepare_rsi_story import build_story
@@ -18,6 +20,11 @@ from prepare_rsi_story import build_story
 ROOT = Path(__file__).resolve().parents[1]
 PORT = int(os.getenv("DASHBOARD_API_PORT", "8787"))
 RSI_RUNS_CSV = Path(os.getenv("RSI_RUNS_CSV", ROOT / "data/rsi_runs.csv"))
+MODEL_METRICS_CSV = Path(os.getenv("MODEL_METRICS_CSV", ROOT / "data/model_metrics.csv"))
+LATEST_RSI_EVAL_JSON = Path(os.getenv("LATEST_RSI_EVAL_JSON", ROOT / "data/latest_rsi_eval.json"))
+LESSONS_FILE = Path(os.getenv("RSI_LESSONS_FILE", ROOT / "data/lessons.md"))
+VERIFIERS_EVAL_DIR = ROOT / "environments/gpu_deal_judge/outputs/evals"
+DISCORD_RSI_CHANNEL_ID = os.getenv("DISCORD_RSI_CHANNEL_ID", "1527922756480401478")
 CATEGORIES = {
     "macbook": re.compile(r"\bmacbook\b", re.I),
     "gpu": re.compile(r"\b(gpu|graphics card|geforce|rtx|gtx|radeon)\b", re.I),
@@ -117,6 +124,111 @@ def marketplace(category):
     }
 
 
+def rsi_operations():
+    fields = {
+        "Model": "model",
+        "Memory Tools": "memory_tools",
+        "Messages": "messages",
+        "Memory Keys": "memory_keys",
+        "Reflection (k chars)": "reflection_k_chars",
+        "Response (k chars)": "response_k_chars",
+        "Memory Write (k chars)": "memory_write_k_chars",
+    }
+    with MODEL_METRICS_CSV.open(newline="", encoding="utf-8-sig") as source:
+        reader = csv.DictReader(source)
+        missing = set(fields) - set(reader.fieldnames or [])
+        if missing:
+            raise ValueError(f"model metrics missing: {', '.join(sorted(missing))}")
+        metrics = [
+            {
+                key: row[column] if key == "model" else float(row[column])
+                for column, key in fields.items()
+            }
+            for row in reader
+        ]
+    lessons = {
+        "status": "awaiting_sync",
+        "file": str(LESSONS_FILE.relative_to(ROOT)),
+        "lesson_count": 0,
+        "updated_at": None,
+    }
+    if LESSONS_FILE.exists():
+        text = LESSONS_FILE.read_text()
+        lessons.update({
+            "status": "synced",
+            "lesson_count": sum(line.lstrip().startswith(("- ", "* ")) for line in text.splitlines()),
+            "updated_at": datetime.fromtimestamp(
+                LESSONS_FILE.stat().st_mtime, timezone.utc
+            ).isoformat(),
+        })
+    latest_eval = None
+    if LATEST_RSI_EVAL_JSON.exists():
+        latest_eval = {"status": "measured", **json.loads(LATEST_RSI_EVAL_JSON.read_text())}
+    else:
+        metadata_files = list(VERIFIERS_EVAL_DIR.glob("**/metadata.json"))
+    if latest_eval is None and metadata_files:
+        latest_file = max(metadata_files, key=lambda path: path.stat().st_mtime)
+        metadata = json.loads(latest_file.read_text())
+        latest_eval = {
+            "status": "measured",
+            "model": metadata.get("model"),
+            "avg_reward": metadata.get("avg_reward"),
+            "avg_metrics": metadata.get("avg_metrics", {}),
+            "num_examples": metadata.get("num_examples"),
+            "rollouts_per_example": metadata.get("rollouts_per_example"),
+            "rollout_count": (
+                metadata.get("num_examples", 0) * metadata.get("rollouts_per_example", 0)
+            ),
+            "eval_seconds": metadata.get("time"),
+            "source": str(latest_file.relative_to(ROOT)),
+        }
+    return {
+        "schedule": [
+            {"time": "8:00", "label": "Read digest"},
+            {"time": "8:05", "label": "Pull lessons"},
+            {"time": "8:15", "label": "Run one RSI cycle"},
+            {"time": "8:45", "label": "Review trend"},
+            {"time": "Human", "label": "Promote or reject"},
+        ],
+        "promotion": {"mode": "human", "flag": "--accepted true"},
+        "lessons": lessons,
+        "latest_eval": latest_eval,
+        "telemetry": {
+            "evidence_status": "imported",
+            "source": str(MODEL_METRICS_CSV.relative_to(ROOT)),
+            "updated_at": datetime.fromtimestamp(
+                MODEL_METRICS_CSV.stat().st_mtime, timezone.utc
+            ).isoformat(),
+            "rows": metrics,
+        },
+    }
+
+
+def discord_rsi_messages():
+    response = requests.get(
+        f"https://discord.com/api/v10/channels/{DISCORD_RSI_CHANNEL_ID}/messages",
+        params={"limit": 20},
+        headers={"Authorization": f"Bot {os.environ['DISCORD_BOT_TOKEN']}"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    messages = [
+        {
+            "id": row["id"],
+            "content": row["content"],
+            "created_at": row["timestamp"],
+            "author": row["author"]["username"],
+            "reactions": [
+                {"emoji": reaction["emoji"]["name"], "count": reaction["count"]}
+                for reaction in row.get("reactions", [])
+            ],
+        }
+        for row in response.json()
+        if row["content"].startswith(("**Actual RSI digest", "**Human promotion gate"))
+    ]
+    return {"status": "live", "channel": "daily", "messages": list(reversed(messages))}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT / "dashboard"), **kwargs)
@@ -180,6 +292,20 @@ class Handler(SimpleHTTPRequestHandler):
                     "error": str(error),
                     "runs": [],
                 }, 422)
+            return
+
+        if parsed.path == "/api/rsi-operations":
+            try:
+                self.send_json(rsi_operations())
+            except Exception as error:
+                self.send_json({"status": "invalid", "error": str(error)}, 422)
+            return
+
+        if parsed.path == "/api/discord-rsi":
+            try:
+                self.send_json(discord_rsi_messages())
+            except Exception as error:
+                self.send_json({"status": "unavailable", "error": str(error)}, 503)
             return
 
         super().do_GET()

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live Discord RSI capture</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#313338;color:#dbdee1;font:15px/1.45 system-ui,sans-serif}
+    header{display:flex;align-items:center;gap:10px;height:54px;padding:0 20px;border-bottom:1px solid #25262a;background:#2b2d31;font-weight:700}
+    header b{color:#23a55a;font-size:11px;letter-spacing:.08em}main{padding:24px 26px}.channel{color:#949ba4;font-size:12px;margin-bottom:22px}
+    article{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:16px 10px;border-radius:7px;background:#2b2d31;opacity:0;transform:translateY(10px);animation:enter .35s .6s forwards}
+    .avatar{display:grid;width:42px;height:42px;place-items:center;border-radius:50%;background:#f0c543;color:#171711;font-weight:800}
+    .meta{display:flex;gap:8px;align-items:baseline}.meta strong{color:#fff}.meta span,.id{color:#949ba4;font-size:11px}.content{margin-top:5px;white-space:pre-line}
+    .content strong{color:#fff}.reactions{display:flex;gap:8px;margin-top:13px}.reaction{padding:5px 9px;border:1px solid #4e5058;border-radius:8px;background:#383a40}
+    footer{position:fixed;inset:auto 0 0;display:flex;justify-content:space-between;padding:12px 20px;background:#2b2d31;color:#949ba4;font-size:11px}
+    @keyframes enter{to{opacity:1;transform:none}}
+  </style>
+</head>
+<body>
+  <header><span>#</span><span>daily</span><b>LIVE DISCORD API</b></header>
+  <main><p class="channel">aitx_sat_2026 server · human promotion channel</p><div id="messages">Loading actual Discord message…</div></main>
+  <footer><span>No simulated values</span><span id="status">Connecting…</span></footer>
+  <script>
+    const wanted=new URLSearchParams(location.search).get("scene")==="approval"?"**Human promotion gate":"**Actual RSI digest";
+    const esc=value=>String(value).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    fetch("/api/discord-rsi").then(r=>r.json()).then(data=>{
+      const message=[...data.messages].reverse().find(row=>row.content.startsWith(wanted));
+      const content=esc(message.content).replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`(.*?)`/g,"<code>$1</code>");
+      document.querySelector("#messages").innerHTML=`<article><div class="avatar">B</div><div>
+        <div class="meta"><strong>${esc(message.author)}</strong><span>${new Date(message.created_at).toLocaleString()}</span></div>
+        <div class="content">${content}</div>
+        <div class="reactions">${message.reactions.map(r=>`<span class="reaction">${esc(r.emoji)} ${r.count}</span>`).join("")}</div>
+        <div class="id">Discord message ${message.id}</div>
+      </div></article>`;
+      document.querySelector("#status").textContent=`Live · #${data.channel}`;
+    });
+  </script>
+</body>
+</html>

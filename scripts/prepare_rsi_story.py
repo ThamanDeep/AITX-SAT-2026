@@ -16,6 +16,10 @@ FIELDS = (
 ).split()
 BOOL_FIELDS = {"accepted", "baseline", "current"}
 NUMBER_FIELDS = set(FIELDS[10:22]) | {"step", "sample_size"}
+REQUIRED_NUMBER_FIELDS = {
+    "step", "sample_size", "decision_quality", "decision_ci",
+    "median_latency_s", "latency_ci",
+}
 PERCENT_FIELDS = {
     "landed_price_error_pct", "valid_url_rate_pct", "unsupported_claims_pct"
 }
@@ -41,7 +45,10 @@ def read_runs(path):
                 for field in BOOL_FIELDS:
                     row[field] = boolean(row[field], field)
                 for field in NUMBER_FIELDS:
-                    row[field] = int(row[field]) if field in {"step", "sample_size"} else float(row[field])
+                    if not row[field] and field not in REQUIRED_NUMBER_FIELDS:
+                        row[field] = None
+                    else:
+                        row[field] = int(row[field]) if field in {"step", "sample_size"} else float(row[field])
                 datetime.fromisoformat(row["evaluated_at"].replace("Z", "+00:00"))
                 rows.append(row)
             except Exception as error:
@@ -51,15 +58,15 @@ def read_runs(path):
 
 
 def validate(rows):
-    if len(rows) < 2:
-        raise ValueError("at least two runs are required")
+    if not rows:
+        raise ValueError("at least one run is required")
     if len({row["run_id"] for row in rows}) != len(rows):
         raise ValueError("run_id values must be unique")
     if len({row["step"] for row in rows}) != len(rows):
         raise ValueError("step values must be unique")
     accepted = [row for row in rows if row["accepted"]]
-    if len(accepted) < 2:
-        raise ValueError("at least two accepted runs are required")
+    if not accepted:
+        raise ValueError("at least one accepted run is required")
     if sum(row["baseline"] for row in accepted) != 1:
         raise ValueError("accepted runs need exactly one baseline")
     if sum(row["current"] for row in accepted) != 1:
@@ -72,10 +79,10 @@ def validate(rows):
         if not 0 <= row["decision_quality"] <= 1:
             raise ValueError(f"{row['run_id']}: decision_quality must be 0..1")
         for field in PERCENT_FIELDS:
-            if not 0 <= row[field] <= 100:
+            if row[field] is not None and not 0 <= row[field] <= 100:
                 raise ValueError(f"{row['run_id']}: {field} must be 0..100")
         for field in NUMBER_FIELDS - {"step"}:
-            if row[field] < 0:
+            if row[field] is not None and row[field] < 0:
                 raise ValueError(f"{row['run_id']}: {field} must be non-negative")
 
 

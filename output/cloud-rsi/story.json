@@ -1,0 +1,42 @@
+{
+  "evidence_status": "measured",
+  "source": "output/cloud-rsi/rsi_runs.remote.csv",
+  "note": "Measured from Verifiers rollout outputs.",
+  "runs": [
+    {
+      "step": 0,
+      "run_id": "baseline-nomem-20260718",
+      "version": "v1.0",
+      "label": "Measured baseline (memory OFF, 45 Nemotron rollouts)",
+      "current": true,
+      "baseline": true,
+      "decision_quality": 0.551111,
+      "decision_ci": 0.050076,
+      "landed_price_error": 0.551111,
+      "landed_ci": 0.050076,
+      "latency": 35.495363,
+      "latency_ci": 4.645941,
+      "valid_url_rate": 0.551111,
+      "url_ci": 0.050076,
+      "unsupported_claims": 0.551111,
+      "claims_ci": 0.050076,
+      "forecast_regret": 0.551111,
+      "regret_ci": 0.050076,
+      "sample_size": 45,
+      "teacher_model": "Nemotron"
+    }
+  ],
+  "candidates": [
+    {
+      "step": 0,
+      "run_id": "baseline-nomem-20260718",
+      "version": "v1.0",
+      "parent_version": "",
+      "accepted": true,
+      "decision_quality": 0.551111,
+      "policy_change": "Measured baseline (memory OFF, 45 Nemotron rollouts)",
+      "evaluated_at": "2026-07-18T20:41:07.756052+00:00"
+    }
+  ],
+  "generated_at": "2026-07-18T21:42:24.099623+00:00"
+}

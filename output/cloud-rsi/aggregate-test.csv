@@ -1,0 +1,2 @@
+step,run_id,version,parent_version,evaluated_at,accepted,baseline,current,evidence_status,policy_change,decision_quality,decision_ci,landed_price_error_pct,landed_ci,median_latency_s,latency_ci,valid_url_rate_pct,url_ci,unsupported_claims_pct,claims_ci,price_forecast_regret_usd,regret_ci,sample_size,teacher_model
+0,test,test,,2026-07-18T21:51:41.050063+00:00,false,false,false,measured,test,0.166667,0.096101,,,49.966129,0.505793,,,,,,,45,Nemotron
