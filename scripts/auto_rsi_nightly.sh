@@ -44,6 +44,40 @@ python3 scripts/verifiers_to_rsi_csv.py "$RESULTS" \
   --teacher-model Nemotron \
   --accepted false \
   --current false
+# Durable store: write the run + tonight's episodes to Supabase (survives
+# Railway redeploys and the EC2 self-stop). Failures never break the cycle.
+if [ -n "${SUPABASE_DB_PW:-}" ] && command -v psql >/dev/null; then
+  DSN="host=${SUPABASE_POOLER_HOST:-aws-0-ca-central-1.pooler.supabase.com} port=5432 dbname=postgres user=${SUPABASE_POOLER_USER:-postgres.qzegmkzyzalmakoqxezc} sslmode=require"
+  docker cp "$C:/sandbox/.openclaw/workspace/memory/episodes.jsonl" /tmp/episodes.jsonl 2>/dev/null || : > /tmp/episodes.jsonl
+  python3 - "$RESULTS" "$VERSION" > /tmp/rsi-supabase.sql <<'PYEOF'
+import json, sys, uuid
+def q(s):
+    tag = "q" + uuid.uuid4().hex[:8]
+    return f"${tag}${s}${tag}$"
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+valid = [r for r in rows if not r.get("error")]
+rw = [float(r.get("reward", 0)) for r in valid] or [0]
+print(f"""insert into public.rsi_runs (run_id, version, decision_quality, n_valid, n_total, decision)
+values ({q(sys.argv[2] + '-' + uuid.uuid4().hex[:6])}, {q(sys.argv[2])}, {sum(rw)/len(rw):.4f}, {len(valid)}, {len(rows)}, {q('candidate')})
+on conflict (run_id) do nothing;""")
+for line in open("/tmp/episodes.jsonl"):
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        e = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    qual = e.get("quality") if e.get("quality") in ("good", "bad", "neutral") else None
+    print(f"""insert into public.episodes (episode_id, episode_date, channel, task_type, request, agent_chain, outcome, feedback, quality, lesson)
+values ({q(str(e.get('episode_id', uuid.uuid4().hex)))}, nullif({q(str(e.get('date', '')))}, '')::date, {q(str(e.get('channel', '')))}, {q(str(e.get('task_type', '')))}, {q(str(e.get('request', '')))}, {q(json.dumps(e.get('agent_chain', [])))}::jsonb, {q(str(e.get('outcome', '')))}, {q(json.dumps(e.get('feedback', {})))}::jsonb, {q(qual) if qual else 'null'}, {q(str(e.get('lesson', ''))) if e.get('lesson') else 'null'})
+on conflict (episode_id) do nothing;""")
+PYEOF
+  PGPASSWORD="$SUPABASE_DB_PW" psql "$DSN" -q -v ON_ERROR_STOP=0 -f /tmp/rsi-supabase.sql >/dev/null 2>&1 \
+    && echo "supabase: run + episodes stored" || echo "supabase write failed (non-fatal)"
+  rm -f /tmp/rsi-supabase.sql
+fi
+
 python3 scripts/post_rsi_discord.py
 
 # Optional: log this cycle to the coordinator API so both RSI tracks share
