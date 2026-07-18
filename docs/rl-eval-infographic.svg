@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" role="img" aria-label="RL evaluation infographic: baseline snapshot v0 and self-improvement loop">
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .t-primary { fill: #0b0b0b; }
+    .t-secondary { fill: #52514e; }
+    .t-muted { fill: #898781; }
+    .card { fill: #fcfcfb; stroke: rgba(11,11,11,0.10); stroke-width: 1; }
+    .hair { stroke: #e1e0d9; stroke-width: 1; }
+    .axis { stroke: #c3c2b7; stroke-width: 1; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+
+  <!-- page -->
+  <rect width="1200" height="860" fill="#f9f9f7"/>
+
+  <!-- header -->
+  <text x="40" y="52" font-size="27" font-weight="700" class="t-primary">Recursive Self-Improvement Evaluation — Review-Judge Agent</text>
+  <text x="40" y="78" font-size="15" class="t-secondary">AITX SAT 2026 hackathon · soft RL (verbal reinforcement, Reflexion-style) · improvement proven on a frozen benchmark, not vibes</text>
+  <rect x="912" y="30" width="248" height="30" rx="15" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
+  <text x="1036" y="50" font-size="13" font-weight="600" text-anchor="middle" class="t-secondary">Baseline v0 · 2026-07-17 22:45 CDT</text>
+
+  <!-- stat tiles -->
+  <g>
+    <rect x="40" y="100" width="262" height="118" rx="10" class="card"/>
+    <text x="60" y="128" font-size="13" class="t-secondary">Accuracy</text>
+    <text x="60" y="172" font-size="40" font-weight="700" class="t-primary">56.7%</text>
+    <text x="60" y="198" font-size="12" class="t-muted">barely above coin flip (50%)</text>
+
+    <rect x="326" y="100" width="262" height="118" rx="10" class="card"/>
+    <text x="346" y="128" font-size="13" class="t-secondary">Precision — deceptive</text>
+    <text x="346" y="172" font-size="40" font-weight="700" class="t-primary">65.0%</text>
+    <text x="346" y="198" font-size="12" class="t-muted">when it cries fake, it's usually right</text>
+
+    <rect x="612" y="100" width="262" height="118" rx="10" class="card"/>
+    <text x="632" y="128" font-size="13" class="t-secondary">Recall — deceptive</text>
+    <text x="632" y="172" font-size="40" font-weight="700" fill="#d03b3b">27.1%</text>
+    <text x="632" y="198" font-size="12" class="t-muted">▲ the weakness: misses 73% of fakes</text>
+
+    <rect x="898" y="100" width="262" height="118" rx="10" class="card"/>
+    <text x="918" y="128" font-size="13" class="t-secondary">F1 — deceptive</text>
+    <text x="918" y="172" font-size="40" font-weight="700" class="t-primary">0.382</text>
+    <text x="918" y="198" font-size="12" class="t-muted">headline metric for the learning curve</text>
+  </g>
+
+  <!-- left card: confusion breakdown -->
+  <g>
+    <rect x="40" y="246" width="560" height="288" rx="10" class="card"/>
+    <text x="60" y="278" font-size="16" font-weight="700" class="t-primary">Where the zero-memory baseline fails</text>
+    <text x="60" y="298" font-size="12.5" class="t-muted">97 scored reviews · gold labels · 1 review = 6.5 px</text>
+
+    <text x="60" y="332" font-size="13" font-weight="600" class="t-secondary">48 deceptive reviews</text>
+    <!-- caught 13 = 84.5px, gap 2, missed 35 = 227.5px -->
+    <rect x="60" y="342" width="84.5" height="26" rx="4" fill="#0ca30c"/>
+    <rect x="146.5" y="342" width="227.5" height="26" rx="4" fill="#d03b3b"/>
+    <text x="60" y="388" font-size="12.5" class="t-secondary">✓ caught 13</text>
+    <text x="146.5" y="388" font-size="12.5" font-weight="600" class="t-secondary">✗ missed 35 — slipped past the judge</text>
+
+    <text x="60" y="430" font-size="13" font-weight="600" class="t-secondary">49 genuine reviews</text>
+    <!-- cleared 42 = 273px, gap 2, flagged 7 = 45.5px -->
+    <rect x="60" y="440" width="273" height="26" rx="4" fill="#0ca30c"/>
+    <rect x="335" y="440" width="45.5" height="26" rx="4" fill="#ec835a"/>
+    <text x="60" y="486" font-size="12.5" class="t-secondary">✓ correctly cleared 42</text>
+    <text x="335" y="486" font-size="12.5" fill="#52514e">▲ falsely flagged 7</text>
+
+    <text x="60" y="518" font-size="13" font-weight="600" class="t-primary">Diagnosis: the judge is gullible — it defaults to “looks real to me.”</text>
+  </g>
+
+  <!-- right card: the loop -->
+  <g>
+    <rect x="624" y="246" width="536" height="288" rx="10" class="card"/>
+    <text x="644" y="278" font-size="16" font-weight="700" class="t-primary">The soft-RL loop (no weights are trained)</text>
+
+    <rect x="644" y="300" width="230" height="62" rx="8" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.5"/>
+    <text x="656" y="325" font-size="13" font-weight="600" class="t-primary">1 · Talk</text>
+    <text x="656" y="343" font-size="12" class="t-secondary">users chat with the agent on</text>
+    <text x="656" y="357" font-size="12" class="t-secondary">Discord all hackathon long</text>
+
+    <rect x="910" y="300" width="230" height="62" rx="8" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.5"/>
+    <text x="922" y="325" font-size="13" font-weight="600" class="t-primary">2 · Grade</text>
+    <text x="922" y="343" font-size="12" class="t-secondary">reactions + outcomes become</text>
+    <text x="922" y="357" font-size="12" class="t-secondary">the reward signal (good / bad)</text>
+
+    <rect x="910" y="404" width="230" height="62" rx="8" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.5"/>
+    <text x="922" y="429" font-size="13" font-weight="600" class="t-primary">3 · Learn</text>
+    <text x="922" y="447" font-size="12" class="t-secondary">graded lessons distilled into</text>
+    <text x="922" y="461" font-size="12" class="t-secondary">versioned memory (git)</text>
+
+    <rect x="644" y="404" width="230" height="62" rx="8" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.5"/>
+    <text x="656" y="429" font-size="13" font-weight="600" class="t-primary">4 · Measure</text>
+    <text x="656" y="447" font-size="12" class="t-secondary">re-run the frozen benchmark →</text>
+    <text x="656" y="461" font-size="12" class="t-secondary">snapshot vK on the curve</text>
+
+    <line x1="874" y1="331" x2="906" y2="331" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="1025" y1="362" x2="1025" y2="400" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="906" y1="435" x2="878" y2="435" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="759" y1="400" x2="759" y2="366" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <text x="644" y="500" font-size="12.5" class="t-secondary">Guard-rails: benchmark items never enter memory (leakage audit) · memory-ON vs OFF</text>
+    <text x="644" y="518" font-size="12.5" class="t-secondary">ablation isolates the learning · regression &gt; 2 F1 pts auto-rolls back one version</text>
+  </g>
+
+  <!-- learning curve -->
+  <g>
+    <rect x="40" y="562" width="1120" height="226" rx="10" class="card"/>
+    <text x="60" y="594" font-size="16" font-weight="700" class="t-primary">Learning curve — filled in live during the hackathon</text>
+    <text x="60" y="614" font-size="12.5" class="t-muted">F1 (deceptive) on the same frozen 100-review slice, temperature 0, three repeats per snapshot</text>
+
+    <!-- plot area x 100..1100 y 640..750 ; F1 0 -> 1 maps 750 -> 640 -->
+    <line x1="100" y1="662" x2="1100" y2="662" class="hair"/>
+    <line x1="100" y1="695" x2="1100" y2="695" class="hair"/>
+    <line x1="100" y1="728" x2="1100" y2="728" class="hair"/>
+    <line x1="100" y1="750" x2="1100" y2="750" class="axis"/>
+    <text x="92" y="644" font-size="11" text-anchor="end" class="t-muted">1.0</text>
+    <text x="92" y="699" font-size="11" text-anchor="end" class="t-muted">0.5</text>
+    <text x="92" y="754" font-size="11" text-anchor="end" class="t-muted">0.0</text>
+
+    <!-- v0 point: F1 0.382 -> y = 750 - 0.382*110 = 708 -->
+    <circle cx="160" cy="708" r="8" fill="#2a78d6"/>
+    <text x="160" y="770" font-size="12" text-anchor="middle" class="t-secondary">v0</text>
+    <text x="178" y="678" font-size="12.5" font-weight="700" class="t-primary">0.382 · baseline (no memory) · 2026-07-17</text>
+
+    <!-- placeholder path -->
+    <path d="M 168 706 C 420 702, 720 672, 1020 668" fill="none" stroke="#2a78d6" stroke-width="2" stroke-dasharray="3 6" opacity="0.65"/>
+    <circle cx="1040" cy="666" r="8" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2" stroke-dasharray="2 3"/>
+    <text x="1040" y="770" font-size="12" text-anchor="middle" class="t-secondary">v-final</text>
+    <text x="1022" y="646" font-size="12.5" font-weight="600" text-anchor="end" class="t-secondary">final snapshot — end of hackathon (TBD)</text>
+    <text x="100" y="648" font-size="12" class="t-muted">snapshot every ~25 graded interactions · improvement claimed only if McNemar p &lt; 0.05</text>
+  </g>
+
+  <!-- footer -->
+  <text x="40" y="826" font-size="12" class="t-muted">Benchmark: Ott OpSpam v1.4 deceptive-review corpus · frozen fold5 slice, seed 2026 · n=100 (97 scored, 3 unparsed) · judge: nvidia/nemotron-3-super-120b-a12b via NVIDIA Endpoints</text>
+  <text x="40" y="844" font-size="12" class="t-muted">Harness: benchmarks/run_benchmark.py · scorecards: benchmarks/results/ · method: docs/self-improving-review-judge.md</text>
+</svg>
