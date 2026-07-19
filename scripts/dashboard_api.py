@@ -23,6 +23,12 @@ RSI_RUNS_CSV = Path(os.getenv("RSI_RUNS_CSV", ROOT / "data/rsi_runs.csv"))
 MODEL_METRICS_CSV = Path(os.getenv("MODEL_METRICS_CSV", ROOT / "data/model_metrics.csv"))
 LATEST_RSI_EVAL_JSON = Path(os.getenv("LATEST_RSI_EVAL_JSON", ROOT / "data/latest_rsi_eval.json"))
 LESSONS_FILE = Path(os.getenv("RSI_LESSONS_FILE", ROOT / "data/lessons.md"))
+AUTORESEARCH_EXPERIMENTS = Path(os.getenv("AUTORESEARCH_EXPERIMENTS", ROOT / "data/autoresearch_experiments.json"))
+RADAR_SNAPSHOTS = Path(os.getenv("RADAR_SNAPSHOTS", ROOT / "data/radar_snapshots.json"))
+COORDINATOR_URL = os.getenv(
+    "COORDINATOR_URL",
+    "https://nemoclaw-coordinator-api-production.up.railway.app",
+).rstrip("/")
 VERIFIERS_EVAL_DIR = ROOT / "environments/gpu_deal_judge/outputs/evals"
 DISCORD_RSI_CHANNEL_ID = os.getenv("DISCORD_RSI_CHANNEL_ID", "1527922756480401478")
 CATEGORIES = {
@@ -268,6 +274,118 @@ def discord_rsi_messages():
     return {"status": "live", "channel": "daily", "messages": list(reversed(messages))}
 
 
+
+
+def coordinator_json(path):
+    response = requests.get(f"{COORDINATOR_URL}{path}", timeout=8)
+    response.raise_for_status()
+    return response.json()
+
+
+def measured_radar():
+    rows = coordinator_json("/api/radar")
+    measured = [
+        row for row in rows
+        if isinstance(row, dict) and row.get("source") == "autoresearch-loop"
+    ]
+    if not measured:
+        raise ValueError("coordinator has no live EC2 worker rows")
+    return measured
+
+
+def _experiment_payload(rows, source):
+    clean = [row for row in rows if isinstance(row, dict) and isinstance(row.get("accuracy"), (int, float))]
+    experiments = []
+    for index, row in enumerate(clean, 1):
+        safety = float(row.get("deal_safety", 100))
+        stability = float(row.get("stability", 0) or 0)
+        experiments.append({
+            **row,
+            "experiment": index,
+            "kept": bool(row.get("accepted") or row.get("role") == "champion"),
+            "price_regression": round(max(0, 100 - safety), 3),
+            "agent_regression": round(max(0, -stability), 4),
+            "description": row.get("hypothesis") or row.get("version", f"experiment {index}"),
+        })
+    if not experiments:
+        raise ValueError("no measured autoresearch rows")
+    kept = [row for row in experiments if row["kept"]]
+    current = kept[-1] if kept else experiments[0]
+    first = experiments[0]
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source": source,
+        "seed": "live",
+        "summary": {
+            "experiments": len(experiments),
+            "kept": len(kept),
+            "accuracy_start": first["accuracy"],
+            "accuracy_now": current["accuracy"],
+            "retrieval_start": first.get("retrieval_s", 0),
+            "retrieval_now": current.get("retrieval_s", 0),
+            "price_regression_start": first["price_regression"],
+            "price_regression_now": current["price_regression"],
+            "agent_regression_start": first["agent_regression"],
+            "agent_regression_now": current["agent_regression"],
+        },
+        "experiments": experiments,
+        "seed_justification": {"supabase_note": f"Live measured history from {source}"},
+    }
+
+
+def autoresearch_experiments():
+    """Prefer the live coordinator; retain committed evidence as an offline fallback."""
+    try:
+        return _experiment_payload(measured_radar(), "live EC2 loop via Railway")
+    except Exception:
+        pass
+    if AUTORESEARCH_EXPERIMENTS.exists():
+        return json.loads(AUTORESEARCH_EXPERIMENTS.read_text())
+    if RADAR_SNAPSHOTS.exists():
+        return _experiment_payload(
+            json.loads(RADAR_SNAPSHOTS.read_text()),
+            "committed radar snapshot",
+        )
+    raise FileNotFoundError("no autoresearch experiment history")
+
+
+def try_supabase_rsi_runs():
+    """Best-effort read of public.rsi_runs when DB credentials exist."""
+    try:
+        with database() as connection, connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                "select run_id, version, source, decision_quality, n_valid, n_total, "
+                "decision, evaluated_at from public.rsi_runs order by evaluated_at asc"
+            )
+            rows = [
+                {key: json_value(value) for key, value in row.items()}
+                for row in cursor.fetchall()
+            ]
+        return {"status": "ok", "count": len(rows), "runs": rows}
+    except Exception as error:
+        # Surface measured CSV anchors so the UI can still justify the seed.
+        csv_runs = []
+        if RSI_RUNS_CSV.exists():
+            with RSI_RUNS_CSV.open() as fh:
+                for row in csv.DictReader(fh):
+                    csv_runs.append({
+                        "run_id": row.get("run_id"),
+                        "version": row.get("version"),
+                        "decision_quality": row.get("decision_quality"),
+                        "median_latency_s": row.get("median_latency_s"),
+                        "evaluated_at": row.get("evaluated_at"),
+                        "source": "data/rsi_runs.csv",
+                    })
+        return {
+            "status": "unavailable",
+            "error": str(error),
+            "runs": [],
+            "csv_fallback": csv_runs,
+            "prime_eval": json.loads(LATEST_RSI_EVAL_JSON.read_text())
+            if LATEST_RSI_EVAL_JSON.exists() else None,
+        }
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT / "dashboard"), **kwargs)
@@ -310,6 +428,17 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(marketplace(category))
             except Exception as error:
                 self.send_json({"data_status": "unavailable", "error": str(error), "listings": []}, 503)
+            return
+
+        if parsed.path == "/api/autoresearch-experiments":
+            try:
+                self.send_json(autoresearch_experiments())
+            except Exception as error:
+                self.send_json({"error": str(error), "experiments": []}, 503)
+            return
+
+        if parsed.path == "/api/supabase-rsi-runs":
+            self.send_json(try_supabase_rsi_runs())
             return
 
         if parsed.path == "/api/improvement":
