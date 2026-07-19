@@ -560,8 +560,8 @@ $$(".method-video").forEach(container=>{
     video.addEventListener("pause",()=>{container.classList.remove("playing");toggle.setAttribute("aria-pressed","false");$("i",toggle).className="fa-solid fa-play"});
     if(!video.paused){container.classList.add("playing");toggle.setAttribute("aria-pressed","true");$("i",toggle).className="fa-solid fa-pause"}
   }
-  $("[data-video-expand]",container).addEventListener("click",()=>openVideoZoom(container));
-  $("[data-video-fullscreen]",container).addEventListener("click",()=>enterFullscreen(container));
+  $("[data-video-expand]",container)?.addEventListener("click",()=>openVideoZoom(container));
+  $("[data-video-fullscreen]",container)?.addEventListener("click",()=>enterFullscreen(container));
 });
 $("#video-zoom-close").addEventListener("click",()=>zoom.close());
 $("#video-zoom-fullscreen").addEventListener("click",()=>enterFullscreen(zoomStage));
