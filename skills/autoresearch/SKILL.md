@@ -8,7 +8,20 @@ description: >
 tags: [research, autonomous, background, ml, policy, market]
 ---
 
+
+
 # Autoresearch Skill (AITX)
+
+**Start here (Karpathy-identical filenames at repo root):**
+
+| File | Role |
+|------|------|
+| [`prepare.py`](../../prepare.py) | Frozen golden-set evaluation — do not modify |
+| [`train.py`](../../train.py) | Policy lessons the agent edits |
+| [`program.md`](../../program.md) | Branch → edit → run → keep/discard |
+| [`results.tsv`](../../results.tsv) | Experiment log |
+| [`progress.png`](../../progress.png) | Running-best teaser |
+
 
 Port of the Hermes Agent autoresearch design
 ([issue #4823](https://github.com/NousResearch/hermes-agent/issues/4823)),

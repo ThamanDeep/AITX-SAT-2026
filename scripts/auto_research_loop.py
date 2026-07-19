@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
-"""Autoresearch loop (karpathy + Hermes #4823 pattern) for the GPU-deal policy.
+"""Continuous autoresearch host wrapper (Karpathy-pattern).
 
-Each cycle uses a git-based branch → mutate → evaluate → merge/revert loop
-backed by skills/autoresearch helper scripts (state, plan, evaluate, workspace,
-report, usage). Main always holds the champion lessons file.
+Single-experiment surface (what humans/agents should look at first):
+  prepare.py   — frozen eval harness (do not modify)
+  train.py     — policy lessons the agent edits
+  program.md   — branch → edit → run → keep/discard instructions
+  results.tsv  — experiment log
 
-Four Pareto objectives (Mode 1 — policy/ML):
-  accuracy      decision_quality mean          - must go UP
-  retrieval     mean seconds per answer        - must stay LOW
-  deal_safety   100 - forbidden-platform hits  - price regression must NOT happen
-  stability     accuracy vs champion delta     - model regression must NOT happen
-
-Optional Mode 2 (knowledge): builds research.md via the E/A/D/R/N rubric.
-
-State lives under research/runs/<id>/ (config, status, control, checkpoint,
-plan, results.log, usage.json, workspace/). Snapshots still stream to
-data/radar_snapshots.json and the coordinator API.
-
-Env:
-  OPENCODE_API_KEY (researcher), NVIDIA_INFERENCE_API_KEY (+ optional
-  OPENROUTER_API_KEY fallback), optional COORDINATOR_URL, CYCLE_SECS,
-  AUTORESEARCH_MODE=policy|knowledge, AUTORESEARCH_DEPTH=quick|deep|unlimited,
-  MAX_EXPERIMENTS, MAX_DURATION_MINUTES, MAX_TOKENS, RUN_ID.
+This module is the *always-on* EC2/Railway companion: it loops train-style
+mutations, uses the same Pareto gate as prepare.pareto_keep, and POSTs
+snapshots to COORDINATOR_URL so Vercel/Railway dashboards stay live.
 """
 
 from __future__ import annotations
@@ -36,6 +24,9 @@ from pathlib import Path
 import requests
 
 REPO = Path(os.environ.get("REPO_DIR", Path(__file__).resolve().parents[1]))
+
+# Karpathy-root prepare.py is the canonical eval harness.
+# Local copies of score/evaluate below remain as fallbacks if prepare is unavailable.
 SKILL_SCRIPTS = REPO / "skills" / "autoresearch" / "scripts"
 sys.path.insert(0, str(SKILL_SCRIPTS))
 
@@ -466,6 +457,20 @@ def policy_cycle(run_dir, workspace_dir, exp, history, champ_metrics, fails):
     return history, champ_metrics, cand_fails or fails, False
 
 
+
+
+# --- Karpathy prepare.py override (canonical metric) ---
+try:
+    import importlib.util as _ilu
+    _prep_path = REPO / "prepare.py"
+    if _prep_path.exists():
+        _spec = _ilu.spec_from_file_location("aitx_prepare", _prep_path)
+        _prep = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_prep)
+        evaluate = _prep.evaluate  # noqa: F811 — prefer frozen harness
+        print("[autoresearch] using prepare.py evaluate() as ground truth", flush=True)
+except Exception as _e:
+    pass
 
 def resync_coordinator():
     """On start, re-POST the local history as a list (coordinator appends);
