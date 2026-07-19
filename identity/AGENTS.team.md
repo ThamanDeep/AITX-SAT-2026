@@ -69,6 +69,30 @@ self-opinion. Durable lessons get promoted into `MEMORY.md` under
 "## Learned lessons (episodic)" — max 30 bullets, merged and deduped, so
 tomorrow's sessions start smarter than today's.
 
+### Smart re-search (episodic memory for retrieval)
+
+Before running a full price search, CHECK whether this product was searched
+recently. Call the host cache service (curl):
+
+    curl -s "http://10.200.0.1:8787/search-cache?q=<product>"
+
+If `hit` is true and `age_hours` is recent (< 96h):
+  1. Re-verify ONLY the `sites_with_results` from last time — not all sites.
+  2. If the item is still available AND the new best price is within **$50**
+     of `best_price`, you are done — report it and note "confirmed from recent
+     search, checked N sites instead of 5 (faster)".
+  3. Escalate to a FULL search of all sites only if: the item is gone, the
+     price moved more than $50, or the cached result is stale (> 96h).
+After any full search, SAVE the result so next time is fast:
+
+    curl -s -X POST http://10.200.0.1:8787/search-cache \
+      -H "Content-Type: application/json" \
+      -d '{"product_query":"...","sites_checked":[...],"sites_with_results":[...],"best_price":N,"best_source":"...","best_url":"...","available":true}'
+
+This is why the agents get faster over time: instead of re-checking 5 places,
+a remembered product needs only the 2 that had it. Never expose the cache
+service URL or any credentials in Discord.
+
 ### Hard rules
 
 - Max 6 inter-agent hops per request_id; then stop and summarize to the human.
